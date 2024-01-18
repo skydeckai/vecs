@@ -20,6 +20,7 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
+    Text,
     and_,
     cast,
     delete,
@@ -159,6 +160,7 @@ class Collection:
         dimension: int,
         client: Client,
         adapter: Optional[Adapter] = None,
+        add_text_column: Optional[bool] = True,
     ):
         """
         Initializes a new instance of the `Collection` class.
@@ -174,7 +176,7 @@ class Collection:
         self.client = client
         self.name = name
         self.dimension = dimension
-        self.table = build_table(name, client.meta, dimension)
+        self.table = build_table(name, client.meta, dimension, add_text_column)
         self._index: Optional[str] = None
         self.adapter = adapter or Adapter(steps=[NoOp(dimension=dimension)])
 
@@ -910,7 +912,9 @@ def build_filters(json_col: Column, filters: Dict):
                     raise Unreachable()
 
 
-def build_table(name: str, meta: MetaData, dimension: int) -> Table:
+def build_table(
+    name: str, meta: MetaData, dimension: int, add_text_column: bool
+) -> Table:
     """
     PRIVATE
 
@@ -920,13 +924,11 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
         name (str): The name of the table.
         meta (MetaData): MetaData instance associated with the SQL database.
         dimension: The dimension of the vectors in the collection.
-
+        add_text_column: Whether to add a text column to the table for storing text data
     Returns:
         Table: The constructed SQL table.
     """
-    return Table(
-        name,
-        meta,
+    columns = [
         Column("id", String, primary_key=True),
         Column("vec", Vector(dimension), nullable=False),
         Column(
@@ -935,5 +937,12 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
             server_default=text("'{}'::jsonb"),
             nullable=False,
         ),
+    ]
+    if add_text_column:
+        columns.append(Column("text", Text, nullable=True))
+    return Table(
+        name,
+        meta,
         extend_existing=True,
+        *columns,
     )
