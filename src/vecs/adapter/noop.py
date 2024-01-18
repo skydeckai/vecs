@@ -38,18 +38,18 @@ class NoOp(AdapterStep):
 
     def __call__(
         self,
-        records: Iterable[Tuple[str, Any, Optional[Dict]]],
+        records: Iterable[Tuple[str, Any, Optional[Dict], Optional[str]]],
         adapter_context: AdapterContext,
-    ) -> Generator[Tuple[str, Any, Dict], None, None]:
+    ) -> Generator[Tuple[str, Any, Dict, str], None, None]:
         """
         Yields the input records without any modification.
 
         Args:
-            records: Iterable of tuples each containing an id, a media and an optional dict.
+            records: Iterable of tuples each containing an id, a media, an optional dict and an optional str.
             adapter_context: Context of the adapter.
 
         Yields:
-            Tuple[str, Any, Dict]: The input record.
+            Tuple[str, Any, Dict, str]: The input record.
         """
-        for id, media, metadata in records:
-            yield (id, media, metadata or {})
+        for id, media, metadata, text in records:
+            yield (id, media, metadata or {}, text or None)

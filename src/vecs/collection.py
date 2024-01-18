@@ -160,7 +160,6 @@ class Collection:
         dimension: int,
         client: Client,
         adapter: Optional[Adapter] = None,
-        add_text_column: Optional[bool] = True,
     ):
         """
         Initializes a new instance of the `Collection` class.
@@ -176,7 +175,7 @@ class Collection:
         self.client = client
         self.name = name
         self.dimension = dimension
-        self.table = build_table(name, client.meta, dimension, add_text_column)
+        self.table = build_table(name, client.meta, dimension)
         self._index: Optional[str] = None
         self.adapter = adapter or Adapter(steps=[NoOp(dimension=dimension)])
 
@@ -454,6 +453,7 @@ class Collection:
         measure: Union[IndexMeasure, str] = IndexMeasure.cosine_distance,
         include_value: bool = False,
         include_metadata: bool = False,
+        include_text: bool = False,
         *,
         probes: Optional[int] = None,
         ef_search: Optional[int] = None,
@@ -508,20 +508,21 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [("", data, {})]
+            adapted_query = [("", data, {}, "")]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[("", data, {})], adapter_context=AdapterContext("query")
+                    records=[("", data, {}, "")],
+                    adapter_context=AdapterContext("query"),
                 )
             ]
 
         if len(adapted_query) != 1:
             raise ArgError("Failed to produce exactly one query vector from input")
 
-        _, vec, _ = adapted_query[0]
+        _, vec, _, _ = adapted_query[0]
 
         distance_lambda = INDEX_MEASURE_TO_SQLA_ACC.get(imeasure)
         if distance_lambda is None:
@@ -537,6 +538,9 @@ class Collection:
 
         if include_metadata:
             cols.append(self.table.c.metadata)
+
+        if include_text:
+            cols.append(self.table.c.text)
 
         stmt = select(*cols)
         if filters:
@@ -912,9 +916,7 @@ def build_filters(json_col: Column, filters: Dict):
                     raise Unreachable()
 
 
-def build_table(
-    name: str, meta: MetaData, dimension: int, add_text_column: bool
-) -> Table:
+def build_table(name: str, meta: MetaData, dimension: int) -> Table:
     """
     PRIVATE
 
@@ -924,11 +926,12 @@ def build_table(
         name (str): The name of the table.
         meta (MetaData): MetaData instance associated with the SQL database.
         dimension: The dimension of the vectors in the collection.
-        add_text_column: Whether to add a text column to the table for storing text data
     Returns:
         Table: The constructed SQL table.
     """
-    columns = [
+    return Table(
+        name,
+        meta,
         Column("id", String, primary_key=True),
         Column("vec", Vector(dimension), nullable=False),
         Column(
@@ -937,12 +940,6 @@ def build_table(
             server_default=text("'{}'::jsonb"),
             nullable=False,
         ),
-    ]
-    if add_text_column:
-        columns.append(Column("text", Text, nullable=True))
-    return Table(
-        name,
-        meta,
+        Column("text", Text, nullable=True),
         extend_existing=True,
-        *columns,
     )

@@ -1,3 +1,5 @@
+# This adapter is not working for now since we add another field to the records.
+
 """
 The `vecs.experimental.adapter.text` module provides adapter steps specifically designed for
 handling text data. It provides two main classes, `TextEmbedding` and `ParagraphChunker`.
