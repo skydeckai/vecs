@@ -1,3 +1,5 @@
+# This adapter is not working for now since we add another field to the records.
+
 import re
 from typing import Any, Dict, Generator, Iterable, Optional, Tuple
 
