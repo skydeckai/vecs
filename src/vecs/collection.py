@@ -944,7 +944,7 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
             nullable=False,
         ),
         Column("text", Text, nullable=True),
-        Column("document_id", BIGINT, nullable=False),
-        Column("order", BIGINT, nullable=False),
+        Column("document_id", BIGINT, nullable=False, index=True),
+        Column("order", BIGINT, nullable=False, index=True),
         extend_existing=True,
     )
