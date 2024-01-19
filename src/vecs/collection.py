@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple, Un
 from flupy import flu
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    BIGINT,
     Column,
     MetaData,
     String,
@@ -508,13 +509,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [("", data, {}, "")]
+            adapted_query = [("", data, {}, "", None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[("", data, {}, "")],
+                    records=[("", data, {}, "", None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
@@ -522,7 +523,7 @@ class Collection:
         if len(adapted_query) != 1:
             raise ArgError("Failed to produce exactly one query vector from input")
 
-        _, vec, _, _ = adapted_query[0]
+        vec = adapted_query[0][1]
 
         distance_lambda = INDEX_MEASURE_TO_SQLA_ACC.get(imeasure)
         if distance_lambda is None:
@@ -538,6 +539,8 @@ class Collection:
 
         if include_metadata:
             cols.append(self.table.c.metadata)
+            cols.append(self.table.c.document_id)
+            cols.append(self.table.c.order)
 
         if include_text:
             cols.append(self.table.c.text)
@@ -941,5 +944,7 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
             nullable=False,
         ),
         Column("text", Text, nullable=True),
+        Column("document_id", BIGINT, nullable=False),
+        Column("order", BIGINT, nullable=False),
         extend_existing=True,
     )
