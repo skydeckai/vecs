@@ -57,7 +57,7 @@ class Client:
         Returns:
             None
         """
-        self.engine = create_engine(connection_string)
+        self.engine = create_engine(connection_string, pool_size=0)
         self.meta = MetaData(schema="vecs")
         self.Session = sessionmaker(self.engine)
 
@@ -173,7 +173,8 @@ class Client:
             query_result = sess.execute(query).fetchone()
 
             if query_result is None:
-                raise CollectionNotFound("No collection found with requested name")
+                raise CollectionNotFound(
+                    "No collection found with requested name")
 
             name, dimension = query_result
             return Collection(
