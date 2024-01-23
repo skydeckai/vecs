@@ -263,6 +263,27 @@ class Collection:
         if not collection_dimension:
             self.table.create(self.client.engine)
 
+            with self.client.Session() as sess:
+                sess.execute(
+                    text(
+                        f"""
+                        create index {self.name}_ix_document_id
+                          on vecs."{self.name}"
+                          using btree ( document_id )
+                        """
+                    )
+                )
+                sess.execute(
+                    text(
+                        f"""
+                        create index {self.name}_ix_order
+                          on vecs."{self.name}"
+                          using btree ( "order" )
+                        """
+                    )
+                )
+                sess.commit()
+
         return self
 
     def _create(self):
@@ -944,7 +965,7 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
             nullable=False,
         ),
         Column("text", Text, nullable=True),
-        Column("document_id", BIGINT, nullable=False, index=True),
-        Column("order", BIGINT, nullable=False, index=True),
+        Column("document_id", BIGINT, nullable=True),
+        Column("order", BIGINT, nullable=True),
         extend_existing=True,
     )
