@@ -262,28 +262,6 @@ class Collection:
 
         if not collection_dimension:
             self.table.create(self.client.engine)
-
-            with self.client.Session() as sess:
-                sess.execute(
-                    text(
-                        f"""
-                        create index {self.name}_ix_document_id
-                          on vecs."{self.name}"
-                          using btree ( document_id )
-                        """
-                    )
-                )
-                sess.execute(
-                    text(
-                        f"""
-                        create index {self.name}_ix_order
-                          on vecs."{self.name}"
-                          using btree ( "order" )
-                        """
-                    )
-                )
-                sess.commit()
-
         return self
 
     def _create(self):
