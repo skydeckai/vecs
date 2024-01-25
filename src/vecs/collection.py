@@ -267,7 +267,7 @@ class Collection:
                 sess.execute(
                     text(
                         f"""
-                        create index {self.name}_document_id_idx
+                        create index "{self.name}_document_id_idx"
                           on vecs."{self.name}"
                           using btree ( document_id )
                         """
@@ -301,7 +301,7 @@ class Collection:
             sess.execute(
                 text(
                     f"""
-                    create index {self.name}_document_id_idx
+                    create index "{self.name}_document_id_idx"
                       on vecs."{self.name}"
                       using btree ( document_id )
                     """
