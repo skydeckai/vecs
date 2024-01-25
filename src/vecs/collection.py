@@ -297,17 +297,17 @@ class Collection:
             )
         self.table.create(self.client.engine)
 
-        unique_string = str(uuid.uuid4()).replace("-", "_")[0:7]
         with self.client.Session() as sess:
             sess.execute(
                 text(
                     f"""
-                    create index ix_meta_{unique_string}
-                      on vecs."{self.table.name}"
-                      using gin ( metadata jsonb_path_ops )
+                    create index {self.name}_document_id_idx
+                      on vecs."{self.name}"
+                      using btree ( document_id )
                     """
                 )
             )
+            sess.commit()
         return self
 
     def _drop(self):
