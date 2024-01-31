@@ -57,7 +57,7 @@ class Client:
         Returns:
             None
         """
-        self.engine = create_engine(connection_string, pool_size=0)
+        self.engine = create_engine(connection_string, pool_size=0, pool_pre_ping=True)
         self.meta = MetaData(schema="vecs")
         self.Session = sessionmaker(self.engine)
 
