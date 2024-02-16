@@ -948,7 +948,7 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
         name,
         meta,
         Column("id", String, primary_key=True),
-        Column("vec", Vector(dimension), nullable=False),
+        Column("vec", Vector(dimension), nullable=True),
         Column(
             "metadata",
             postgresql.JSONB,
