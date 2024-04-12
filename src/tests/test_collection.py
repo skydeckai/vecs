@@ -256,7 +256,7 @@ def test_query(client: vecs.Client) -> None:
         measure="cosine_distance",
         include_metadata=True,
     )
-    assert len(res[0]) == 4
+    assert len(res[0]) == 5
     assert res[0][0] == "vec5"
     assert res[0][1] == query_meta
     assert res[0][2] == query_document_id
@@ -284,13 +284,14 @@ def test_query(client: vecs.Client) -> None:
         include_metadata=True,
         include_value=True,
     )
-    assert len(res[0]) == 6
+    assert len(res[0]) == 7
     assert res[0][0] == "vec5"
     assert pytest.approx(res[0][1]) == 0
     assert res[0][2] == query_meta
     assert res[0][3] == query_document_id
     assert res[0][4] == query_order
-    assert res[0][5] == query_text
+    assert res[0][5] == query_memento_membership
+    assert res[0][6] == query_text
 
     # test for different numbers of probes
     assert len(bar.query(data=query_vec, limit=top_k, probes=10)) == top_k
