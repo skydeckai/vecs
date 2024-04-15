@@ -187,7 +187,7 @@ def test_query(client: vecs.Client) -> None:
 
     bar.upsert(records)
 
-    _, query_vec, query_meta, query_text, query_document_id, query_order, query_memento_membership = bar["vec5"]
+    _, query_vec, query_meta, query_text, query_doc_instance_id, query_order, query_memento_membership = bar["vec5"]
 
     top_k = 7
 
@@ -259,7 +259,7 @@ def test_query(client: vecs.Client) -> None:
     assert len(res[0]) == 5
     assert res[0][0] == "vec5"
     assert res[0][1] == query_meta
-    assert res[0][2] == query_document_id
+    assert res[0][2] == query_doc_instance_id
     assert res[0][3] == query_order
 
     # include_text
@@ -288,7 +288,7 @@ def test_query(client: vecs.Client) -> None:
     assert res[0][0] == "vec5"
     assert pytest.approx(res[0][1]) == 0
     assert res[0][2] == query_meta
-    assert res[0][3] == query_document_id
+    assert res[0][3] == query_doc_instance_id
     assert res[0][4] == query_order
     assert res[0][5] == query_memento_membership
     assert res[0][6] == query_text

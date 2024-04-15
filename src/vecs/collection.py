@@ -267,9 +267,9 @@ class Collection:
                 sess.execute(
                     text(
                         f"""
-                        create index "{self.name}_document_id_idx"
+                        create index "{self.name}_doc_instance_id_idx"
                           on vecs."{self.name}"
-                          using btree ( document_id )
+                          using btree ( doc_instance_id )
                         """
                     )
                 )
@@ -313,9 +313,9 @@ class Collection:
             sess.execute(
                 text(
                     f"""
-                    create index "{self.name}_document_id_idx"
+                    create index "{self.name}_doc_instance_id_idx"
                       on vecs."{self.name}"
-                      using btree ( document_id )
+                      using btree ( doc_instance_id )
                     """
                 )
             )
@@ -575,7 +575,7 @@ class Collection:
 
         if include_metadata:
             cols.append(self.table.c.metadata)
-            cols.append(self.table.c.document_id)
+            cols.append(self.table.c.doc_instance_id)
             cols.append(self.table.c.order)
             cols.append(self.table.c.memento_membership)
 
@@ -981,7 +981,7 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
             nullable=False,
         ),
         Column("text", Text, nullable=True),
-        Column("document_id", BIGINT, nullable=True),
+        Column("doc_instance_id", BIGINT, nullable=True),
         Column("order", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
         extend_existing=True,
