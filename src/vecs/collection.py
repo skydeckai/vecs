@@ -267,9 +267,21 @@ class Collection:
                 sess.execute(
                     text(
                         f"""
-                        create index "{self.name}_document_id_idx"
+                        create index "{self.name}_doc_instance_id_idx"
                           on vecs."{self.name}"
-                          using btree ( document_id )
+                          using btree ( doc_instance_id )
+                        """
+                    )
+                )
+                sess.commit()
+
+            with self.client.Session() as sess:
+                sess.execute(
+                    text(
+                        f"""
+                        create index "{self.name}_memento_membership_idx"
+                          on vecs."{self.name}"
+                          using btree ( memento_membership )
                         """
                     )
                 )
@@ -301,9 +313,21 @@ class Collection:
             sess.execute(
                 text(
                     f"""
-                    create index "{self.name}_document_id_idx"
+                    create index "{self.name}_doc_instance_id_idx"
                       on vecs."{self.name}"
-                      using btree ( document_id )
+                      using btree ( doc_instance_id )
+                    """
+                )
+            )
+            sess.commit()
+
+        with self.client.Session() as sess:
+            sess.execute(
+                text(
+                    f"""
+                    create index "{self.name}_memento_membership_idx"
+                      on vecs."{self.name}"
+                      using btree ( memento_membership )
                     """
                 )
             )
@@ -521,13 +545,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [("", data, {}, "", None, None)]
+            adapted_query = [("", data, {}, "", None, None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[("", data, {}, "", None, None)],
+                    records=[("", data, {}, "", None, None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
@@ -551,8 +575,9 @@ class Collection:
 
         if include_metadata:
             cols.append(self.table.c.metadata)
-            cols.append(self.table.c.document_id)
+            cols.append(self.table.c.doc_instance_id)
             cols.append(self.table.c.order)
+            cols.append(self.table.c.memento_membership)
 
         if include_text:
             cols.append(self.table.c.text)
@@ -956,7 +981,8 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
             nullable=False,
         ),
         Column("text", Text, nullable=True),
-        Column("document_id", BIGINT, nullable=True),
+        Column("doc_instance_id", BIGINT, nullable=True),
         Column("order", BIGINT, nullable=True),
+        Column("memento_membership", BIGINT, nullable=True),
         extend_existing=True,
     )
