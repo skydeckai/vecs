@@ -20,16 +20,15 @@ def test_upsert(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": random.choice(["action", "rom-com", "drama"]),
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for ix, vec in enumerate(np.random.random((n_records, dim)))
     ]
@@ -268,7 +267,7 @@ def test_query(client: vecs.Client) -> None:
         limit=top_k,
         filters=None,
         measure="cosine_distance",
-        include_text=True,
+        # include_text=True,
     )
     assert len(res[0]) == 2
     assert res[0][0] == "vec5"
@@ -280,7 +279,7 @@ def test_query(client: vecs.Client) -> None:
         limit=top_k,
         filters=None,
         measure="cosine_distance",
-        include_text=True,
+        # include_text=True,
         include_metadata=True,
         include_value=True,
     )

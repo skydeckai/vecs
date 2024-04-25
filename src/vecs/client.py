@@ -164,7 +164,7 @@ class Client:
         where
             pc.relnamespace = 'vecs'::regnamespace
             and pc.relkind = 'r'
-            and pa.attname = 'vec'
+            and pa.attname = 'vector'
             and not pc.relname ^@ '_'
             and pc.relname = :name
         """

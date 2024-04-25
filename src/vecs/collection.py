@@ -19,9 +19,9 @@ from sqlalchemy import (
     BIGINT,
     Column,
     MetaData,
-    String,
+    # String,
     Table,
-    Text,
+    # Text,
     and_,
     cast,
     delete,
@@ -29,6 +29,8 @@ from sqlalchemy import (
     or_,
     select,
     text,
+    UUID,
+    INTEGER
 )
 from sqlalchemy.dialects import postgresql
 
@@ -267,9 +269,9 @@ class Collection:
                 sess.execute(
                     text(
                         f"""
-                        create index "{self.name}_doc_instance_id_idx"
+                        create index "{self.name}_temp_doc_instance_id_idx"
                           on vecs."{self.name}"
-                          using btree ( doc_instance_id )
+                          using btree ( temp_doc_instance_id )
                         """
                     )
                 )
@@ -282,6 +284,18 @@ class Collection:
                         create index "{self.name}_memento_membership_idx"
                           on vecs."{self.name}"
                           using btree ( memento_membership )
+                        """
+                    )
+                )
+                sess.commit()
+
+            with self.client.Session() as sess:
+                sess.execute(
+                    text(
+                        f"""
+                        create index "{self.name}_document_content_id_idx"
+                          on vecs."{self.name}"
+                          using btree ( document_content_id )
                         """
                     )
                 )
@@ -313,9 +327,9 @@ class Collection:
             sess.execute(
                 text(
                     f"""
-                    create index "{self.name}_doc_instance_id_idx"
+                    create index "{self.name}_temp_doc_instance_id_idx"
                       on vecs."{self.name}"
-                      using btree ( doc_instance_id )
+                      using btree ( temp_doc_instance_id )
                     """
                 )
             )
@@ -328,6 +342,18 @@ class Collection:
                     create index "{self.name}_memento_membership_idx"
                       on vecs."{self.name}"
                       using btree ( memento_membership )
+                    """
+                )
+            )
+            sess.commit()
+
+        with self.client.Session() as sess:
+            sess.execute(
+                text(
+                    f"""
+                    create index "{self.name}_document_content_id_idx"
+                        on vecs."{self.name}"
+                        using btree ( document_content_id )
                     """
                 )
             )
@@ -387,7 +413,7 @@ class Collection:
                     stmt = stmt.on_conflict_do_update(
                         index_elements=[self.table.c.id],
                         set_=dict(
-                            vec=stmt.excluded.vec, metadata=stmt.excluded.metadata
+                            vec=stmt.excluded.vector, metadata=stmt.excluded.metadata
                         ),
                     )
                     sess.execute(stmt)
@@ -486,11 +512,11 @@ class Collection:
         self,
         data: Union[Iterable[Numeric], Any],
         limit: int = 10,
-        filters: Optional[Dict] = None,
+        # filters: Optional[Dict] = None,
         measure: Union[IndexMeasure, str] = IndexMeasure.cosine_distance,
         include_value: bool = False,
         include_metadata: bool = False,
-        include_text: bool = False,
+        # include_text: bool = False,
         *,
         probes: Optional[int] = None,
         ef_search: Optional[int] = None,
@@ -566,27 +592,30 @@ class Collection:
             # unreachable
             raise ArgError("invalid distance_measure")  # pragma: no cover
 
-        distance_clause = distance_lambda(self.table.c.vec)(vec)
+        distance_clause = distance_lambda(self.table.c.vector)(vec)
 
-        cols = [self.table.c.id]
+        cols = [self.table.c.vector_id]
 
         if include_value:
             cols.append(distance_clause)
 
         if include_metadata:
-            cols.append(self.table.c.metadata)
-            cols.append(self.table.c.doc_instance_id)
-            cols.append(self.table.c.order)
+            cols.append(self.table.c.document_content_id)
+            cols.append(self.table.c.begin_offset_byte)
+            cols.append(self.table.c.chunk_bytes)
+            cols.append(self.table.c.offset_began_hhmm1970)
             cols.append(self.table.c.memento_membership)
+            cols.append(self.table.c.temp_doc_instance_id)
+            cols.append(self.table.c.temp_vector_uuid)
 
-        if include_text:
-            cols.append(self.table.c.text)
+        # if include_text:
+        #     cols.append(self.table.c.text)
 
         stmt = select(*cols)
-        if filters:
-            stmt = stmt.filter(
-                build_filters(self.table.c.metadata, filters)  # type: ignore
-            )
+        # if filters:
+        #     stmt = stmt.filter(
+        #         build_filters(self.table.c.metadata, filters)  # type: ignore
+        #     )
 
         stmt = stmt.order_by(distance_clause)
         stmt = stmt.limit(limit)
@@ -633,7 +662,7 @@ class Collection:
         where
             pc.relnamespace = 'vecs'::regnamespace
             and pc.relkind = 'r'
-            and pa.attname = 'vec'
+            and pa.attname = 'vector'
             and not pc.relname ^@ '_'
         """
         )
@@ -834,7 +863,7 @@ class Collection:
                             f"""
                             create index ix_{ops}_ivfflat_nl{n_lists}_{unique_string}
                               on vecs."{self.table.name}"
-                              using ivfflat (vec {ops}) with (lists={n_lists})
+                              using ivfflat (vector {ops}) with (lists={n_lists})
                             """
                         )
                     )
@@ -853,7 +882,7 @@ class Collection:
                             f"""
                             create index ix_{ops}_hnsw_m{m}_efc{ef_construction}_{unique_string}
                               on vecs."{self.table.name}"
-                              using hnsw (vec {ops}) WITH (m={m}, ef_construction={ef_construction});
+                              using hnsw (vector {ops}) WITH (m={m}, ef_construction={ef_construction});
                             """
                         )
                     )
@@ -972,17 +1001,14 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
     return Table(
         name,
         meta,
-        Column("id", String, primary_key=True),
-        Column("vec", Vector(dimension), nullable=True),
-        Column(
-            "metadata",
-            postgresql.JSONB,
-            server_default=text("'{}'::jsonb"),
-            nullable=False,
-        ),
-        Column("text", Text, nullable=True),
-        Column("doc_instance_id", BIGINT, nullable=True),
-        Column("order", BIGINT, nullable=True),
+        Column("vector_id", BIGINT, primary_key=True, autoincrement=True),
+        Column("vector", Vector(dimension), nullable=True),
+        Column("document_content_id", BIGINT, nullable=True),
+        Column("begin_offset_byte", INTEGER, nullable=True),
+        Column("chunk_bytes", INTEGER, nullable=True),
+        Column("offset_began_hhmm1970", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
+        Column("temp_doc_instance_id", INTEGER, nullable=True),
+        Column("temp_vector_uuid", UUID, nullable=True),
         extend_existing=True,
     )
