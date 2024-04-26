@@ -411,7 +411,7 @@ class Collection:
                 for chunk in pipeline:
                     stmt = postgresql.insert(self.table).values(chunk)
                     stmt = stmt.on_conflict_do_update(
-                        index_elements=[self.table.c.id],
+                        index_elements=[self.table.c.vector_id],
                         set_=dict(
                             vec=stmt.excluded.vector, metadata=stmt.excluded.metadata
                         ),
