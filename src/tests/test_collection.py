@@ -54,16 +54,15 @@ def test_fetch(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": random.choice(["action", "rom-com", "drama"]),
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3,
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for ix, vec in enumerate(np.random.random((n_records, dim)))
     ]
@@ -72,14 +71,14 @@ def test_fetch(client: vecs.Client) -> None:
     movies.upsert(records)
 
     # test basic usage
-    fetch_ids = ["vec0", "vec15", "vec99"]
+    fetch_ids = [1, 12, 99]
     res = movies.fetch(ids=fetch_ids)
     assert len(res) == 3
     ids = set([x[0] for x in res])
     assert all([x in ids for x in fetch_ids])
 
     # test one of the keys does not exist not an error
-    fetch_ids = ["vec0", "vec15", "does not exist"]
+    fetch_ids = [1, 12, 133]
     res = movies.fetch(ids=fetch_ids)
     assert len(res) == 2
 
@@ -96,16 +95,15 @@ def test_delete(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": genre,
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3,
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for (ix, vec), genre in zip(
             enumerate(np.random.random((n_records, dim))),
@@ -117,17 +115,17 @@ def test_delete(client: vecs.Client) -> None:
     movies.upsert(records)
 
     # delete by IDs.
-    delete_ids = ["vec0", "vec15", "vec99"]
+    delete_ids = [1, 12, 99]
     movies.delete(ids=delete_ids)
     assert len(movies) == n_records - len(delete_ids)
 
     # insert works
     movies.upsert(records)
 
-    # delete with filters
-    genre_to_delete = "action"
-    deleted_ids_by_genre = movies.delete(filters={"genre": {"$eq": genre_to_delete}})
-    assert len(deleted_ids_by_genre) == 34
+    # # delete with filters -> do not have metadata now
+    # genre_to_delete = "action"
+    # deleted_ids_by_genre = movies.delete(filters={"genre": {"$eq": genre_to_delete}})
+    # assert len(deleted_ids_by_genre) == 34
 
     # bad input
     with pytest.raises(vecs.exc.ArgError):
@@ -137,9 +135,9 @@ def test_delete(client: vecs.Client) -> None:
     with pytest.raises(vecs.exc.ArgError):
         movies.delete()
 
-    # bad input: should only provide either ids or filters, not both
-    with pytest.raises(vecs.exc.ArgError):
-        movies.delete(ids=["vec0"], filters={"genre": {"$eq": genre_to_delete}})
+    # # bad input: should only provide either ids or filters, not both -> do not have metadata now
+    # with pytest.raises(vecs.exc.ArgError):
+    #     movies.delete(ids=[1], filters={"genre": {"$eq": genre_to_delete}})
 
 
 def test_repr(client: vecs.Client) -> None:
@@ -149,13 +147,13 @@ def test_repr(client: vecs.Client) -> None:
 
 def test_getitem(client: vecs.Client) -> None:
     movies = client.get_or_create_collection(name="movies", dimension=3)
-    movies.upsert(records=[("1", [1, 2, 3], {}, "1", 1, 0, 3)])
+    movies.upsert(records=[(1, [1, 2, 3], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
 
-    assert movies["1"] is not None
-    assert len(movies["1"]) == 7
+    assert movies[1] is not None
+    assert len(movies[1]) == 9
 
     with pytest.raises(KeyError):
-        assert movies["2"] is not None
+        assert movies[2] is not None
 
     with pytest.raises(vecs.exc.ArgError):
         movies[["only strings work not lists"]]
@@ -170,30 +168,34 @@ def test_query(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": random.choice(["action", "rom-com", "drama"]),
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3,
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for ix, vec in enumerate(np.random.random((n_records, dim)))
     ]
 
     bar.upsert(records)
+    
+    print("====records====")
+    print(records[1])
+    print("==bar[5]==")
+    print(bar[5])
 
-    _, query_vec, query_meta, query_text, query_doc_instance_id, query_order, query_memento_membership = bar["vec5"]
+    _, query_vec, query_document_content_id, query_begin_offset_byte, query_chunk_bytes, query_offset_began_hhmm1970, query_memento_membership, query_temp_doc_instance_id, query_temp_vector_uuid = bar[5]
 
     top_k = 7
 
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
+        # filters=None,
         measure="cosine_distance",
         include_value=False,
         include_metadata=False,
@@ -202,7 +204,7 @@ def test_query(client: vecs.Client) -> None:
     # correct number of results
     assert len(res) == top_k
     # most similar to self
-    assert res[0] == "vec5"
+    assert res[0] == 5
 
     with pytest.raises(vecs.exc.ArgError):
         res = bar.query(
@@ -244,14 +246,14 @@ def test_query(client: vecs.Client) -> None:
         include_value=True,
     )
     assert len(res[0]) == 2
-    assert res[0][0] == "vec5"
+    assert res[0][0] == 5
     assert pytest.approx(res[0][1]) == 0
 
     # include_metadata
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
+        # filters=None,
         measure="cosine_distance",
         include_metadata=True,
     )
