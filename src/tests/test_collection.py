@@ -38,9 +38,9 @@ def test_upsert(client: vecs.Client) -> None:
     assert len(movies) == n_records
 
     # upserting overwrites
-    new_record = ("vec0", np.zeros(384), {}, "text", 0, 0, 2)
+    new_record = (1, np.zeros(384), 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")
     movies.upsert([new_record])
-    db_record = movies["vec0"]
+    db_record = movies[1]
     db_record[0] == new_record[0]
     db_record[1] == new_record[1]
     db_record[2] == new_record[2]
