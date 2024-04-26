@@ -437,7 +437,7 @@ class Collection:
         with self.client.Session() as sess:
             with sess.begin():
                 for id_chunk in flu(ids).chunk(chunk_size):
-                    stmt = select(self.table).where(self.table.c.id.in_(id_chunk))
+                    stmt = select(self.table).where(self.table.c.vector_id.in_(id_chunk))
                     chunk_records = sess.execute(stmt)
                     records.extend(chunk_records)
         return records
@@ -474,18 +474,18 @@ class Collection:
                     for id_chunk in flu(ids).chunk(12):
                         stmt = (
                             delete(self.table)
-                            .where(self.table.c.id.in_(id_chunk))
-                            .returning(self.table.c.id)
+                            .where(self.table.c.vector_id.in_(id_chunk))
+                            .returning(self.table.c.vector_id)
                         )
                         del_ids.extend(sess.execute(stmt).scalars() or [])
 
-                if filters:
-                    meta_filter = build_filters(self.table.c.metadata, filters)
-                    stmt = (
-                        delete(self.table).where(meta_filter).returning(self.table.c.id)  # type: ignore
-                    )
-                    result = sess.execute(stmt).scalars()
-                    del_ids.extend(result.fetchall())
+                # if filters:
+                #     meta_filter = build_filters(self.table.c.metadata, filters)
+                #     stmt = (
+                #         delete(self.table).where(meta_filter).returning(self.table.c.vector_id)  # type: ignore
+                #     )
+                #     result = sess.execute(stmt).scalars()
+                #     del_ids.extend(result.fetchall())
 
         return del_ids
 
@@ -842,7 +842,7 @@ class Collection:
 
                 if method == IndexMethod.ivfflat:
                     if not index_arguments:
-                        n_records: int = sess.execute(func.count(self.table.c.id)).scalar()  # type: ignore
+                        n_records: int = sess.execute(func.count(self.table.c.vector_id)).scalar()  # type: ignore
 
                         n_lists = (
                             int(max(n_records / 1000, 30))
