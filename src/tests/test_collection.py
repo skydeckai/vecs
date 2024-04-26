@@ -1,5 +1,4 @@
 import itertools
-import random
 
 import numpy as np
 import pytest
@@ -20,16 +19,15 @@ def test_upsert(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": random.choice(["action", "rom-com", "drama"]),
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for ix, vec in enumerate(np.random.random((n_records, dim)))
     ]
@@ -39,9 +37,9 @@ def test_upsert(client: vecs.Client) -> None:
     assert len(movies) == n_records
 
     # upserting overwrites
-    new_record = ("vec0", np.zeros(384), {}, "text", 0, 0, 2)
+    new_record = (1, np.zeros(384), 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")
     movies.upsert([new_record])
-    db_record = movies["vec0"]
+    db_record = movies[1]
     db_record[0] == new_record[0]
     db_record[1] == new_record[1]
     db_record[2] == new_record[2]
@@ -55,16 +53,15 @@ def test_fetch(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": random.choice(["action", "rom-com", "drama"]),
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3,
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for ix, vec in enumerate(np.random.random((n_records, dim)))
     ]
@@ -73,14 +70,14 @@ def test_fetch(client: vecs.Client) -> None:
     movies.upsert(records)
 
     # test basic usage
-    fetch_ids = ["vec0", "vec15", "vec99"]
+    fetch_ids = [1, 12, 99]
     res = movies.fetch(ids=fetch_ids)
     assert len(res) == 3
     ids = set([x[0] for x in res])
     assert all([x in ids for x in fetch_ids])
 
     # test one of the keys does not exist not an error
-    fetch_ids = ["vec0", "vec15", "does not exist"]
+    fetch_ids = [1, 12, 133]
     res = movies.fetch(ids=fetch_ids)
     assert len(res) == 2
 
@@ -97,16 +94,15 @@ def test_delete(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": genre,
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3,
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for (ix, vec), genre in zip(
             enumerate(np.random.random((n_records, dim))),
@@ -118,17 +114,12 @@ def test_delete(client: vecs.Client) -> None:
     movies.upsert(records)
 
     # delete by IDs.
-    delete_ids = ["vec0", "vec15", "vec99"]
+    delete_ids = [1, 12, 99]
     movies.delete(ids=delete_ids)
     assert len(movies) == n_records - len(delete_ids)
 
     # insert works
     movies.upsert(records)
-
-    # delete with filters
-    genre_to_delete = "action"
-    deleted_ids_by_genre = movies.delete(filters={"genre": {"$eq": genre_to_delete}})
-    assert len(deleted_ids_by_genre) == 34
 
     # bad input
     with pytest.raises(vecs.exc.ArgError):
@@ -138,10 +129,6 @@ def test_delete(client: vecs.Client) -> None:
     with pytest.raises(vecs.exc.ArgError):
         movies.delete()
 
-    # bad input: should only provide either ids or filters, not both
-    with pytest.raises(vecs.exc.ArgError):
-        movies.delete(ids=["vec0"], filters={"genre": {"$eq": genre_to_delete}})
-
 
 def test_repr(client: vecs.Client) -> None:
     movies = client.get_or_create_collection(name="movies", dimension=99)
@@ -150,13 +137,13 @@ def test_repr(client: vecs.Client) -> None:
 
 def test_getitem(client: vecs.Client) -> None:
     movies = client.get_or_create_collection(name="movies", dimension=3)
-    movies.upsert(records=[("1", [1, 2, 3], {}, "1", 1, 0, 3)])
+    movies.upsert(records=[(1, [1, 2, 3], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
 
-    assert movies["1"] is not None
-    assert len(movies["1"]) == 7
+    assert movies[1] is not None
+    assert len(movies[1]) == 9
 
     with pytest.raises(KeyError):
-        assert movies["2"] is not None
+        assert movies[2] is not None
 
     with pytest.raises(vecs.exc.ArgError):
         movies[["only strings work not lists"]]
@@ -171,30 +158,29 @@ def test_query(client: vecs.Client) -> None:
 
     records = [
         (
-            f"vec{ix}",
+            ix,
             vec,
-            {
-                "genre": random.choice(["action", "rom-com", "drama"]),
-                "year": int(50 * random.random()) + 1970,
-            },
-            "text",
             1,
             0,
-            3,
+            100,
+            1714039150,
+            1,
+            1,
+            "4f67a14f-dfd5-4382-b60b-e520888d15d8"
         )
         for ix, vec in enumerate(np.random.random((n_records, dim)))
     ]
 
     bar.upsert(records)
 
-    _, query_vec, query_meta, query_text, query_doc_instance_id, query_order, query_memento_membership = bar["vec5"]
+    _, query_vec, query_document_content_id, query_begin_offset_byte, query_chunk_bytes, query_offset_began_hhmm1970, query_memento_membership, _, _ = bar[5]
 
     top_k = 7
 
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
+        # filters=None,
         measure="cosine_distance",
         include_value=False,
         include_metadata=False,
@@ -203,7 +189,7 @@ def test_query(client: vecs.Client) -> None:
     # correct number of results
     assert len(res) == top_k
     # most similar to self
-    assert res[0] == "vec5"
+    assert res[0] == '5'
 
     with pytest.raises(vecs.exc.ArgError):
         res = bar.query(
@@ -240,58 +226,50 @@ def test_query(client: vecs.Client) -> None:
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
         measure="cosine_distance",
         include_value=True,
     )
     assert len(res[0]) == 2
-    assert res[0][0] == "vec5"
+    assert res[0][0] == 5
     assert pytest.approx(res[0][1]) == 0
 
     # include_metadata
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
         measure="cosine_distance",
         include_metadata=True,
     )
-    assert len(res[0]) == 5
-    assert res[0][0] == "vec5"
-    assert res[0][1] == query_meta
-    assert res[0][2] == query_doc_instance_id
-    assert res[0][3] == query_order
+    assert len(res[0]) == 8
+    assert res[0][0] == 5
+    assert res[0][1] == query_document_content_id
+    assert res[0][2] == query_begin_offset_byte
+    assert res[0][3] == query_chunk_bytes
 
-    # include_text
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
         measure="cosine_distance",
-        include_text=True,
     )
-    assert len(res[0]) == 2
-    assert res[0][0] == "vec5"
-    assert res[0][1] == query_text
+    assert len(res[0]) == 1
+    assert res[0][0] == '5'
 
-    # include_value, include_metadata, and include_text
+    # include_value, include_metadata
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
         measure="cosine_distance",
-        include_text=True,
         include_metadata=True,
         include_value=True,
     )
-    assert len(res[0]) == 7
-    assert res[0][0] == "vec5"
+    assert len(res[0]) == 9
+    assert res[0][0] == 5
     assert pytest.approx(res[0][1]) == 0
-    assert res[0][2] == query_meta
-    assert res[0][3] == query_doc_instance_id
-    assert res[0][4] == query_order
-    assert res[0][5] == query_memento_membership
-    assert res[0][6] == query_text
+    assert res[0][2] == query_document_content_id
+    assert res[0][3] == query_begin_offset_byte
+    assert res[0][4] == query_chunk_bytes
+    assert res[0][5] == query_offset_began_hhmm1970
+    assert res[0][6] == query_memento_membership
 
     # test for different numbers of probes
     assert len(bar.query(data=query_vec, limit=top_k, probes=10)) == top_k
@@ -301,329 +279,6 @@ def test_query(client: vecs.Client) -> None:
     assert len(bar.query(data=query_vec, limit=top_k, probes=1)) == top_k
 
     assert len(bar.query(data=query_vec, limit=top_k, probes=999)) == top_k
-
-
-@pytest.mark.filterwarnings("ignore:Query does")
-def test_query_filters(client: vecs.Client) -> None:
-    n_records = 100
-    dim = 4
-
-    bar = client.get_or_create_collection(name="bar", dimension=dim)
-
-    records = [
-        ("0", [0, 0, 0, 0], {"year": 1990}, "0", 1, 0, 3),
-        ("1", [1, 0, 0, 0], {"year": 1995}, "1" ,1, 0, 3),
-        ("2", [1, 1, 0, 0], {"year": 2005}, "2", 1, 0, 3),
-        ("3", [1, 1, 1, 0], {"year": 2001}, "3", 1, 0, 3),
-        ("4", [1, 1, 1, 1], {"year": 1985}, "4", 1, 0, 3),
-        ("5", [2, 1, 1, 1], {"year": 1863}, "5", 1, 0, 3),
-        ("6", [2, 2, 1, 1], {"year": 2021}, "6", 1, 0, 3),
-        ("7", [2, 2, 2, 1], {"year": 2019}, "7", 1, 0, 3),
-        ("8", [2, 2, 2, 2], {"year": 2003}, "8", 1, 0, 3),
-        ("9", [3, 2, 2, 2], {"year": 1997}, "9", 1, 0, 3),
-    ]
-
-    bar.upsert(records)
-
-    query_rec = records[0]
-
-    res = bar.query(
-        data=query_rec[1],
-        limit=3,
-        filters={"year": {"$lt": 1990}},
-        measure="cosine_distance",
-        include_value=False,
-        include_metadata=False,
-    )
-
-    assert res
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=query_rec[1],
-            limit=3,
-            filters=["wrong type"],
-            measure="cosine_distance",
-        )
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=query_rec[1],
-            limit=3,
-            # multiple keys
-            filters={"key1": {"$eq": "v"}, "key2": {"$eq": "v"}},
-            measure="cosine_distance",
-        )
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=query_rec[1],
-            limit=3,
-            # bad key
-            filters={1: {"$eq": "v"}},
-            measure="cosine_distance",
-        )
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=query_rec[1],
-            limit=3,
-            # and requires a list
-            filters={"$and": {"year": {"$eq": 1997}}},
-            measure="cosine_distance",
-        )
-
-    # AND
-    assert (
-        len(
-            bar.query(
-                data=query_rec[1],
-                limit=3,
-                # and requires a list
-                filters={
-                    "$and": [
-                        {"year": {"$eq": 1997}},
-                        {"year": {"$eq": 1997}},
-                    ]
-                },
-                measure="cosine_distance",
-            )
-        )
-        == 1
-    )
-
-    # OR
-    assert (
-        len(
-            bar.query(
-                data=query_rec[1],
-                limit=3,
-                # and requires a list
-                filters={
-                    "$or": [
-                        {"year": {"$eq": 1997}},
-                        {"year": {"$eq": 2001}},
-                    ]
-                },
-                measure="cosine_distance",
-            )
-        )
-        == 2
-    )
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=query_rec[1],
-            limit=3,
-            # bad value, too many conditions
-            filters={"year": {"$eq": 1997, "$ne": 1998}},
-            measure="cosine_distance",
-        )
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=query_rec[1],
-            limit=3,
-            # bad value, unknown operator
-            filters={"year": {"$no_op": 1997}},
-            measure="cosine_distance",
-        )
-
-    # ne
-    assert (
-        len(
-            bar.query(
-                data=query_rec[1],
-                limit=3,
-                # and requires a list
-                filters={"year": {"$ne": 2000}},
-                measure="cosine_distance",
-            )
-        )
-        == 3
-    )
-
-    # lte
-    assert (
-        len(
-            bar.query(
-                data=query_rec[1],
-                limit=3,
-                # and requires a list
-                filters={"year": {"$lte": 1989}},
-                measure="cosine_distance",
-            )
-        )
-        == 2
-    )
-
-    # gt
-    assert (
-        len(
-            bar.query(
-                data=query_rec[1],
-                limit=3,
-                # and requires a list
-                filters={"year": {"$gt": 2019}},
-                measure="cosine_distance",
-            )
-        )
-        == 1
-    )
-
-    # gte
-    assert (
-        len(
-            bar.query(
-                data=query_rec[1],
-                limit=3,
-                # and requires a list
-                filters={"year": {"$gte": 2019}},
-                measure="cosine_distance",
-            )
-        )
-        == 2
-    )
-
-
-def test_filters_eq(client: vecs.Client) -> None:
-    bar = client.get_or_create_collection(name="bar", dimension=4)
-
-    records = [
-        ("0", [0, 0, 0, 0], {"a": 1}, "0", 1, 0, 3),
-        ("1", [1, 0, 0, 0], {"a": 2}, "1", 1, 0, 3),
-        ("2", [1, 1, 0, 0], {"a": 3}, "2", 1, 0, 3),
-        ("3", [1, 1, 1, 0], {"b": [1, 2]}, "3", 1, 0, 3),
-        ("4", [1, 1, 1, 1], {"b": [1, 3]}, "4", 1, 0, 3),
-        ("5", [1, 1, 1, 1], {"b": 1}, "5", 1, 0, 3),
-        ("6", [1, 1, 1, 1], {"c": {"d": "hi"}}, "6", 1, 0, 3),
-    ]
-
-    bar.upsert(records)
-    bar.create_index()
-
-    # Simple equality of number: has match
-    assert bar.query(
-        data=[0, 0, 0, 0],
-        limit=3,
-        filters={"a": {"$eq": 1}},
-    ) == ["0"]
-
-    # Simple equality of number: no match
-    assert (
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"a": {"$eq": 5}},
-        )
-        == []
-    )
-
-    # Equality of array to value: no match
-    assert (
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"a": {"$eq": [1]}},
-        )
-        == []
-    )
-
-    # Equality of value to array: no match
-    assert (
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"b": {"$eq": 2}},
-        )
-        == []
-    )
-
-    # Equality of sub-array to array: no match
-    assert (
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"b": {"$eq": [1]}},
-        )
-        == []
-    )
-
-    # Equality of array to array: match
-    assert bar.query(
-        data=[0, 0, 0, 0],
-        limit=3,
-        filters={"b": {"$eq": [1, 2]}},
-    ) == ["3"]
-
-    # Equality of scalar to dict (key matches): no match
-    assert (
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"c": {"$eq": "d"}},
-        )
-        == []
-    )
-
-    # Equality of scalar to dict (value matches): no match
-    assert (
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"c": {"$eq": "hi"}},
-        )
-        == []
-    )
-
-    # Equality of dict to dict: match
-    assert bar.query(
-        data=[0, 0, 0, 0],
-        limit=3,
-        filters={"c": {"$eq": {"d": "hi"}}},
-    ) == ["6"]
-
-
-def test_filters_in(client: vecs.Client) -> None:
-    bar = client.get_or_create_collection(name="bar", dimension=4)
-
-    records = [
-        ("0", [0, 0, 0, 0], {"a": 1, "b": 2}, "0", 1, 0, 3),
-        ("1", [1, 0, 0, 0], {"a": [1, 2, 3]}, "1", 1, 0, 3),
-        ("2", [1, 1, 0, 0], {"a": {"1": "2"}}, "2", 1, 0, 3),
-        ("3", [0, 0, 0, 0], {"a": "1"}, "3", 1, 0, 3),
-    ]
-
-    bar.upsert(records)
-    bar.create_index()
-
-    # int value of "a" is contained by [1, 2]
-    assert bar.query(
-        data=[0, 0, 0, 0],
-        limit=3,
-        filters={"a": {"$in": [1, 2]}},
-    ) == ["0"]
-
-    # str value of "a" is contained by ["1", "2"]
-    assert bar.query(
-        data=[0, 0, 0, 0],
-        limit=3,
-        filters={"a": {"$in": ["1", "2"]}},
-    ) == ["3"]
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"a": {"$in": 1}},  # error, value should be a list
-        )
-
-    with pytest.raises(vecs.exc.FilterError):
-        bar.query(
-            data=[0, 0, 0, 0],
-            limit=3,
-            filters={"a": {"$in": [1, [2]]}},  # error, element must be scalar
-        )
 
 
 def test_access_index(client: vecs.Client) -> None:
@@ -659,7 +314,7 @@ def test_create_index(client: vecs.Client) -> None:
 def test_ivfflat(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 2, 4, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
 
     bar.create_index(method="ivfflat")  # type: ignore
     results = bar.query(data=[1, 2, 3, 4], limit=1, probes=50)
@@ -676,7 +331,7 @@ def test_ivfflat(client: vecs.Client) -> None:
 def test_hnsw(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 2, 4, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
 
     bar.create_index(method="hnsw")  # type: ignore
     results = bar.query(
@@ -693,7 +348,7 @@ def test_hnsw(client: vecs.Client) -> None:
 def test_index_build_args(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 1, 2, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
 
     # Test that default value for nlists is used in absence of index build args
     bar.create_index(method="ivfflat")
@@ -777,7 +432,7 @@ def test_index_build_args(client: vecs.Client) -> None:
 def test_cosine_index_query(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 1, 2, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
     bar.create_index(measure=vecs.IndexMeasure.cosine_distance)
     results = bar.query(
         data=[1, 2, 3, 4],
@@ -790,7 +445,7 @@ def test_cosine_index_query(client: vecs.Client) -> None:
 def test_l2_index_query(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 2, 4, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
     bar.create_index(measure=vecs.IndexMeasure.l2_distance)
     results = bar.query(
         data=[1, 2, 3, 4],
@@ -803,7 +458,7 @@ def test_l2_index_query(client: vecs.Client) -> None:
 def test_max_inner_product_index_query(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 2, 4, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
     bar.create_index(measure=vecs.IndexMeasure.max_inner_product)
     results = bar.query(
         data=[1, 2, 3, 4],
@@ -816,7 +471,7 @@ def test_max_inner_product_index_query(client: vecs.Client) -> None:
 def test_mismatch_measure(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 2, 4, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
     bar.create_index(measure=vecs.IndexMeasure.max_inner_product)
     with pytest.warns(UserWarning):
         results = bar.query(
@@ -848,7 +503,7 @@ def test_failover_ivfflat(client: vecs.Client) -> None:
     client.vector_version = "0.4.1"
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([("a", [1, 2, 3, 4], {}, "a", 2, 4, 3)])
+    bar.upsert([(1, [1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, "4f67a14f-dfd5-4382-b60b-e520888d15d8")])
     # this executes an otherwise uncovered line of code that selects ivfflat when mode is 'auto'
     # and hnsw is unavailable
     bar.create_index(method=IndexMethod.auto)
