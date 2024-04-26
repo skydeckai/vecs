@@ -19,9 +19,7 @@ from sqlalchemy import (
     BIGINT,
     Column,
     MetaData,
-    # String,
     Table,
-    # Text,
     and_,
     cast,
     delete,
@@ -479,14 +477,6 @@ class Collection:
                         )
                         del_ids.extend(sess.execute(stmt).scalars() or [])
 
-                # if filters:
-                #     meta_filter = build_filters(self.table.c.metadata, filters)
-                #     stmt = (
-                #         delete(self.table).where(meta_filter).returning(self.table.c.vector_id)  # type: ignore
-                #     )
-                #     result = sess.execute(stmt).scalars()
-                #     del_ids.extend(result.fetchall())
-
         return del_ids
 
     def __getitem__(self, items):
@@ -512,11 +502,9 @@ class Collection:
         self,
         data: Union[Iterable[Numeric], Any],
         limit: int = 10,
-        # filters: Optional[Dict] = None,
         measure: Union[IndexMeasure, str] = IndexMeasure.cosine_distance,
         include_value: bool = False,
         include_metadata: bool = False,
-        # include_text: bool = False,
         *,
         probes: Optional[int] = None,
         ef_search: Optional[int] = None,
@@ -608,15 +596,7 @@ class Collection:
             cols.append(self.table.c.temp_doc_instance_id)
             cols.append(self.table.c.temp_vector_uuid)
 
-        # if include_text:
-        #     cols.append(self.table.c.text)
-
         stmt = select(*cols)
-        # if filters:
-        #     stmt = stmt.filter(
-        #         build_filters(self.table.c.metadata, filters)  # type: ignore
-        #     )
-
         stmt = stmt.order_by(distance_clause)
         stmt = stmt.limit(limit)
 
