@@ -183,10 +183,10 @@ def test_query(client: vecs.Client) -> None:
 
     bar.upsert(records)
     
-    print("====records====")
-    print(records[1])
-    print("==bar[5]==")
-    print(bar[5])
+    # print("====records====")
+    # print(records[1])
+    # print("==bar[5]==")
+    # print(bar[5])
 
     _, query_vec, query_document_content_id, query_begin_offset_byte, query_chunk_bytes, query_offset_began_hhmm1970, query_memento_membership, query_temp_doc_instance_id, query_temp_vector_uuid = bar[5]
 
