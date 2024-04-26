@@ -51,7 +51,7 @@ class NoOp(AdapterStep):
         Yields:
             Tuple[int, Any, int, int, int, int, int, int, uuid.UUID]: The input record.
         """
-        print("=====records=====")
-        print(records)
+        # print("=====records=====")
+        # print(records)
         for vector_id, vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began_hhmm1970, memento_membership, temp_doc_instance_id, temp_vector_uuid in records:
             yield (vector_id, vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began_hhmm1970, memento_membership, temp_doc_instance_id, temp_vector_uuid)

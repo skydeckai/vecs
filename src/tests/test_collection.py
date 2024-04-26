@@ -204,7 +204,7 @@ def test_query(client: vecs.Client) -> None:
     # correct number of results
     assert len(res) == top_k
     # most similar to self
-    assert res[0] == 5
+    assert res[0] == '5'
 
     with pytest.raises(vecs.exc.ArgError):
         res = bar.query(
@@ -241,7 +241,7 @@ def test_query(client: vecs.Client) -> None:
     res = bar.query(
         data=query_vec,
         limit=top_k,
-        filters=None,
+        # filters=None,
         measure="cosine_distance",
         include_value=True,
     )
