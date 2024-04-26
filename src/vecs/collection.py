@@ -571,13 +571,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [("", data, {}, "", None, None, None)]
+            adapted_query = [(None, data, None, None, None, None, None, None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[("", data, {}, "", None, None, None)],
+                    records=[(None, data, None, None, None, None, None, None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
