@@ -241,7 +241,7 @@ class Collection:
         where
             pc.relnamespace = 'vecs'::regnamespace
             and pc.relkind = 'r'
-            and pa.attname = 'vec'
+            and pa.attname = 'vector'
             and not pc.relname ^@ '_'
             and pc.relname = :name
         """
@@ -413,7 +413,7 @@ class Collection:
                     stmt = stmt.on_conflict_do_update(
                         index_elements=[self.table.c.vector_id],
                         set_=dict(
-                            vec=stmt.excluded.vector
+                            vector=stmt.excluded.vector
                         ),
                     )
                     sess.execute(stmt)
