@@ -413,7 +413,7 @@ class Collection:
                     stmt = stmt.on_conflict_do_update(
                         index_elements=[self.table.c.vector_id],
                         set_=dict(
-                            vec=stmt.excluded.vector, metadata=stmt.excluded.metadata
+                            vec=stmt.excluded.vector
                         ),
                     )
                     sess.execute(stmt)
