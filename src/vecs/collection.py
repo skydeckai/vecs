@@ -494,13 +494,13 @@ class Collection:
         Fetches a vector from the collection by its identifier.
 
         Args:
-            items (str): The identifier of the vector.
+            items (int): The identifier of the vector.
 
         Returns:
             Record: The fetched vector.
         """
-        if not isinstance(items, str):
-            raise ArgError("items must be a string id")
+        if not isinstance(items, int):
+            raise ArgError("items must be a int id")
 
         row = self.fetch([items])
 
