@@ -287,6 +287,18 @@ class Collection:
                 )
                 sess.commit()
 
+            with self.client.Session() as sess:
+                sess.execute(
+                    text(
+                        f"""
+                        create index "{self.name}_app_id_idx"
+                          on vecs."{self.name}"
+                          using btree ( app_id )
+                        """
+                    )
+                )
+                sess.commit()
+
         return self
 
     def _create(self):
@@ -328,6 +340,18 @@ class Collection:
                     create index "{self.name}_memento_membership_idx"
                       on vecs."{self.name}"
                       using btree ( memento_membership )
+                    """
+                )
+            )
+            sess.commit()
+
+        with self.client.Session() as sess:
+            sess.execute(
+                text(
+                    f"""
+                    create index "{self.name}_app_id_idx"
+                        on vecs."{self.name}"
+                        using btree ( app_id )
                     """
                 )
             )
@@ -545,13 +569,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [("", data, {}, "", None, None, None)]
+            adapted_query = [("", data, {}, "", None, None, None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[("", data, {}, "", None, None, None)],
+                    records=[("", data, {}, "", None, None, None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
@@ -578,6 +602,7 @@ class Collection:
             cols.append(self.table.c.doc_instance_id)
             cols.append(self.table.c.order)
             cols.append(self.table.c.memento_membership)
+            cols.append(self.table.c.app_id)
 
         if include_text:
             cols.append(self.table.c.text)
@@ -984,5 +1009,6 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
         Column("doc_instance_id", BIGINT, nullable=True),
         Column("order", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
+        Column("app_id", BIGINT, nullable=True),
         extend_existing=True,
     )
