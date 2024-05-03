@@ -67,6 +67,7 @@ class NoOp(AdapterStep):
         MAX_NUM_FIELDS = NUM_REQUIRED_FIELDS + NUM_OPTIONAL_EXTRA_FIELDS
         for record in records:
             if len(record) < MAX_NUM_FIELDS:
+                assert len(record) >= NUM_REQUIRED_FIELDS
                 record = list(record) + [None] * (MAX_NUM_FIELDS - len(record))
             (
                 id,
