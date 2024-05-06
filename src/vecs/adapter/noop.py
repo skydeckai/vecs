@@ -38,9 +38,20 @@ class NoOp(AdapterStep):
 
     def __call__(
         self,
-        records: Iterable[Tuple[str, Any, Optional[Dict], Optional[str], Optional[int], Optional[int], Optional[int]]],
+        records: Iterable[
+            Tuple[
+                str,
+                Any,
+                Optional[Dict],
+                Optional[str],
+                Optional[int],
+                Optional[int],
+                Optional[int],
+                Optional[int],
+            ]
+        ],
         adapter_context: AdapterContext,
-    ) -> Generator[Tuple[str, Any, Dict, str, int, int, int], None, None]:
+    ) -> Generator[Tuple[str, Any, Dict, str, int, int, int, int], None, None]:
         """
         Yields the input records without any modification.
 
@@ -51,5 +62,30 @@ class NoOp(AdapterStep):
         Yields:
             Tuple[str, Any, Dict, str, int, int, int]: The input record.
         """
-        for id, media, metadata, text, doc_instance_id, order, memento_membership in records:
-            yield (id, media, metadata or {}, text or None, doc_instance_id, order, memento_membership)
+        NUM_REQUIRED_FIELDS = 6
+        NUM_OPTIONAL_EXTRA_FIELDS = 2  # memento_membership, app_id
+        MAX_NUM_FIELDS = NUM_REQUIRED_FIELDS + NUM_OPTIONAL_EXTRA_FIELDS
+        for record in records:
+            if len(record) < MAX_NUM_FIELDS:
+                assert len(record) >= NUM_REQUIRED_FIELDS
+                record = list(record) + [None] * (MAX_NUM_FIELDS - len(record))
+            (
+                id,
+                media,
+                metadata,
+                text,
+                doc_instance_id,
+                order,
+                memento_membership,
+                app_id,
+            ) = record
+            yield (
+                id,
+                media,
+                metadata or {},
+                text or None,
+                doc_instance_id,
+                order,
+                memento_membership,
+                app_id,
+            )
