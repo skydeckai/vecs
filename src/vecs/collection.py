@@ -381,44 +381,6 @@ class Collection:
     def upsert(
         self, records: Iterable[Tuple[int, int, Any, Metadata]], skip_adapter: bool = False
     ) -> None:
-        # """
-        # Inserts or updates *vectors* records in the collection.
-
-        # Args:
-        #     records (Iterable[Tuple[int, int, Any, Metadata]]): An iterable of content to upsert.
-        #     Each record is a tuple where:
-        #       - the first element is the document_content_id
-        #       - the second element is the begin_offset_byte
-        #       - the third element is an iterable of numeric values or relevant input type for the
-        #         adapter assigned to the collection
-        #       - the fourth element is metadata associated with the vector
-
-        #     skip_adapter (bool): Should the adapter be skipped while upserting. i.e. if vectors are being
-        #         provided, rather than a media type that needs to be transformed
-        # """
-
-        # chunk_size = 500
-
-        # if skip_adapter:
-        #     pipeline = flu(records).chunk(chunk_size)
-        # else:
-        #     # Construct a lazy pipeline of steps to transform and chunk user input
-        #     pipeline = flu(self.adapter(records, AdapterContext("upsert"))).chunk(
-        #         chunk_size
-        #     )
-
-        # with self.client.Session() as sess:
-        #     with sess.begin():
-        #         for chunk in pipeline:
-        #             stmt = postgresql.insert(self.table).values(chunk)
-        #             stmt = stmt.on_conflict_do_update(
-        #                 index_elements=[self.table.c.vector_id],
-        #                 set_=dict(
-        #                     vector=stmt.excluded.vector
-        #                 ),
-        #             )
-        #             sess.execute(stmt)
-        # return None
         """
         Inserts or updates *vectors* records in the collection.
 
@@ -446,26 +408,12 @@ class Collection:
         with self.client.Session() as sess:
             with sess.begin():
                 for chunk in pipeline:
-                    values = [
-                        {
-                            "document_content_id": record[0],
-                            "begin_offset_byte": record[1],
-                            "vector": record[2],
-                            "chunk_bytes": record[3].get("chunk_bytes"),
-                            "offset_began": record[3].get("offset_began"),
-                            "memento_membership": record[3].get("memento_membership"),
-                        }
-                        for record in chunk
-                    ]
-                    stmt = postgresql.insert(self.table).values(values)
+                    stmt = postgresql.insert(self.table).values(chunk)
                     stmt = stmt.on_conflict_do_update(
                         index_elements=[self.table.c.document_content_id, self.table.c.begin_offset_byte],
-                        set_={
-                            self.table.c.vector: stmt.excluded.vector,
-                            self.table.c.chunk_bytes: stmt.excluded.chunk_bytes,
-                            self.table.c.offset_began: stmt.excluded.offset_began,
-                            self.table.c.memento_membership: stmt.excluded.memento_membership,
-                        },
+                        set_=dict(
+                            vector=stmt.excluded.vector
+                        ),
                     )
                     sess.execute(stmt)
         return None
