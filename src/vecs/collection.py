@@ -412,7 +412,7 @@ class Collection:
                     stmt = stmt.on_conflict_do_update(
                         index_elements=[self.table.c.document_content_id, self.table.c.begin_offset_byte],
                         set_=dict(
-                            vector=stmt.excluded.vector
+                            vector=stmt.excluded.vector, metadata=stmt.excluded.metadata
                         ),
                     )
                     sess.execute(stmt)
