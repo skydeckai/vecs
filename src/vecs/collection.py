@@ -27,8 +27,8 @@ from sqlalchemy import (
     or_,
     select,
     text,
-    UUID,
-    INTEGER
+    INTEGER,
+    PrimaryKeyConstraint
 )
 from sqlalchemy.dialects import postgresql
 
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 MetadataValues = Union[str, int, float, bool, List[str]]
 Metadata = Dict[str, MetadataValues]
 Numeric = Union[int, float, complex]
-Record = Tuple[str, Iterable[Numeric], Metadata]
+Record = Tuple[int, int, Iterable[Numeric], Metadata]
 
 
 class IndexMethod(str, Enum):
@@ -161,6 +161,7 @@ class Collection:
         dimension: int,
         client: Client,
         adapter: Optional[Adapter] = None,
+        extend_existing: bool = False,
     ):
         """
         Initializes a new instance of the `Collection` class.
@@ -176,7 +177,7 @@ class Collection:
         self.client = client
         self.name = name
         self.dimension = dimension
-        self.table = build_table(name, client.meta, dimension)
+        self.table = build_table(name, client.meta, dimension, extend_existing=extend_existing)
         self._index: Optional[str] = None
         self.adapter = adapter or Adapter(steps=[NoOp(dimension=dimension)])
 
@@ -267,18 +268,6 @@ class Collection:
                 sess.execute(
                     text(
                         f"""
-                        create index "{self.name}_temp_doc_instance_id_idx"
-                          on vecs."{self.name}"
-                          using btree ( temp_doc_instance_id )
-                        """
-                    )
-                )
-                sess.commit()
-
-            with self.client.Session() as sess:
-                sess.execute(
-                    text(
-                        f"""
                         create index "{self.name}_memento_membership_idx"
                           on vecs."{self.name}"
                           using btree ( memento_membership )
@@ -325,18 +314,6 @@ class Collection:
             sess.execute(
                 text(
                     f"""
-                    create index "{self.name}_temp_doc_instance_id_idx"
-                      on vecs."{self.name}"
-                      using btree ( temp_doc_instance_id )
-                    """
-                )
-            )
-            sess.commit()
-
-        with self.client.Session() as sess:
-            sess.execute(
-                text(
-                    f"""
                     create index "{self.name}_memento_membership_idx"
                       on vecs."{self.name}"
                       using btree ( memento_membership )
@@ -377,20 +354,21 @@ class Collection:
         return self
 
     def upsert(
-        self, records: Iterable[Tuple[str, Any, Metadata]], skip_adapter: bool = False
+        self, records: Iterable[Tuple[int, int, Any, int, int, int]], skip_adapter: bool = False
     ) -> None:
         """
         Inserts or updates *vectors* records in the collection.
 
         Args:
-            records (Iterable[Tuple[str, Any, Metadata]]): An iterable of content to upsert.
+            records (Iterable[Tuple[int, int, Iterable[Numeric], Metadata]]): An iterable of content to upsert.
                 Each record is a tuple where:
-                  - the first element is a unique string identifier
-                  - the second element is an iterable of numeric values or relevant input type for the
+                - the first element is the document_content_id
+                - the second element is the begin_offset_byte
+                - the third element is an iterable of numeric values or relevant input type for the
                     adapter assigned to the collection
-                  - the third element is metadata associated with the vector
+                - the fourth element is metadata associated with the vector
 
-            skip_adapter (bool): Should the adapter be skipped while upserting. i.e. if vectors are being
+            skip_adapter (bool): Should the adapter be skipped while upserting. i.e., if vectors are being
                 provided, rather than a media type that needs to be transformed
         """
 
@@ -400,18 +378,19 @@ class Collection:
             pipeline = flu(records).chunk(chunk_size)
         else:
             # Construct a lazy pipeline of steps to transform and chunk user input
-            pipeline = flu(self.adapter(records, AdapterContext("upsert"))).chunk(
-                chunk_size
-            )
+            pipeline = flu(self.adapter(records, AdapterContext("upsert"))).chunk(chunk_size)
 
         with self.client.Session() as sess:
             with sess.begin():
                 for chunk in pipeline:
                     stmt = postgresql.insert(self.table).values(chunk)
                     stmt = stmt.on_conflict_do_update(
-                        index_elements=[self.table.c.vector_id],
+                        index_elements=[self.table.c.document_content_id, self.table.c.begin_offset_byte],
                         set_=dict(
-                            vector=stmt.excluded.vector
+                            vector=stmt.excluded.vector,
+                            chunk_bytes=stmt.excluded.chunk_bytes,
+                            offset_began=stmt.excluded.offset_began,
+                            memento_membership=stmt.excluded.memento_membership
                         ),
                     )
                     sess.execute(stmt)
@@ -559,13 +538,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [(None, data, None, None, None, None, None, None, None)]
+            adapted_query = [(data, None, None, None, None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[(None, data, None, None, None, None, None, None, None)],
+                    records=[(data, None, None, None, None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
@@ -582,19 +561,15 @@ class Collection:
 
         distance_clause = distance_lambda(self.table.c.vector)(vec)
 
-        cols = [self.table.c.vector_id]
+        cols = [self.table.c.document_content_id, self.table.c.begin_offset_byte]
 
         if include_value:
             cols.append(distance_clause)
 
         if include_metadata:
-            cols.append(self.table.c.document_content_id)
-            cols.append(self.table.c.begin_offset_byte)
             cols.append(self.table.c.chunk_bytes)
-            cols.append(self.table.c.offset_began_hhmm1970)
+            cols.append(self.table.c.offset_began)
             cols.append(self.table.c.memento_membership)
-            cols.append(self.table.c.temp_doc_instance_id)
-            cols.append(self.table.c.temp_vector_uuid)
 
         stmt = select(*cols)
         stmt = stmt.order_by(distance_clause)
@@ -822,7 +797,7 @@ class Collection:
 
                 if method == IndexMethod.ivfflat:
                     if not index_arguments:
-                        n_records: int = sess.execute(func.count(self.table.c.vector_id)).scalar()  # type: ignore
+                        n_records: int = sess.execute(func.count()).scalar()  # type: ignore
 
                         n_lists = (
                             int(max(n_records / 1000, 30))
@@ -965,7 +940,7 @@ def build_filters(json_col: Column, filters: Dict):
                     raise Unreachable()
 
 
-def build_table(name: str, meta: MetaData, dimension: int) -> Table:
+def build_table(name: str, meta: MetaData, dimension: int, extend_existing: bool = False) -> Table:
     """
     PRIVATE
 
@@ -981,14 +956,12 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
     return Table(
         name,
         meta,
-        Column("vector_id", BIGINT, primary_key=True, autoincrement=True),
         Column("vector", Vector(dimension), nullable=True),
-        Column("document_content_id", BIGINT, nullable=True),
-        Column("begin_offset_byte", INTEGER, nullable=True),
+        Column("document_content_id", BIGINT, nullable=False),
+        Column("begin_offset_byte", INTEGER, nullable=False),
         Column("chunk_bytes", INTEGER, nullable=True),
-        Column("offset_began_hhmm1970", BIGINT, nullable=True),
+        Column("offset_began", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
-        Column("temp_doc_instance_id", INTEGER, nullable=True),
-        Column("temp_vector_uuid", UUID, nullable=True),
-        extend_existing=True,
+        PrimaryKeyConstraint("document_content_id", "begin_offset_byte"),
+        extend_existing=extend_existing,
     )

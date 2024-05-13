@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 from deprecated import deprecated
-from sqlalchemy import MetaData, create_engine, text
+from sqlalchemy import MetaData, Table, create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from vecs.adapter import Adapter
@@ -177,11 +177,7 @@ class Client:
                     "No collection found with requested name")
 
             name, dimension = query_result
-            return Collection(
-                name,
-                dimension,
-                self,
-            )
+        return Collection(name, dimension, self, extend_existing=True)
 
     def list_collections(self) -> List["Collection"]:
         """
