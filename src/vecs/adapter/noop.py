@@ -6,7 +6,7 @@ adapter processing is required.
 All public classes, enums, and functions are re-exported by `vecs.adapters` module.
 """
 
-from typing import Any, Dict, Generator, Iterable, Optional, Tuple
+from typing import Any, Generator, Iterable, Optional, Tuple
 
 from .base import AdapterContext, AdapterStep
 import uuid
@@ -38,9 +38,9 @@ class NoOp(AdapterStep):
 
     def __call__(
         self,
-        records: Iterable[Tuple[int, Any, Optional[int], Optional[int], Optional[int], Optional[int], Optional[int], Optional[int], Optional[uuid.UUID]]],
+        records: Iterable[Tuple[Any, Optional[int], Optional[int], Optional[int], Optional[int], Optional[int], Optional[int]]],
         adapter_context: AdapterContext,
-    ) -> Generator[Tuple[int, Any, int, int, int, int, int, int, uuid.UUID], None, None]:
+    ) -> Generator[Tuple[Any, int, int, int, int, int, int], None, None]:
         """
         Yields the input records without any modification.
 
@@ -49,9 +49,7 @@ class NoOp(AdapterStep):
             adapter_context: Context of the adapter.
 
         Yields:
-            Tuple[int, Any, int, int, int, int, int, int, uuid.UUID]: The input record.
+            Tuple[Any, int, int, int, int, int, int]: The input record.
         """
-        # print("=====records=====")
-        # print(records)
-        for vector_id, vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began_hhmm1970, memento_membership, temp_doc_instance_id, temp_vector_uuid in records:
-            yield (vector_id, vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began_hhmm1970, memento_membership, temp_doc_instance_id, temp_vector_uuid)
+        for vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership, temp_doc_instance_id in records:
+            yield (vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership, temp_doc_instance_id)

@@ -27,8 +27,9 @@ from sqlalchemy import (
     or_,
     select,
     text,
-    UUID,
-    INTEGER
+    INTEGER,
+    distinct,
+    PrimaryKeyConstraint
 )
 from sqlalchemy.dialects import postgresql
 
@@ -49,7 +50,7 @@ if TYPE_CHECKING:
 MetadataValues = Union[str, int, float, bool, List[str]]
 Metadata = Dict[str, MetadataValues]
 Numeric = Union[int, float, complex]
-Record = Tuple[str, Iterable[Numeric], Metadata]
+Record = Tuple[int, int, Iterable[Numeric], Metadata]
 
 
 class IndexMethod(str, Enum):
@@ -377,20 +378,59 @@ class Collection:
         return self
 
     def upsert(
-        self, records: Iterable[Tuple[str, Any, Metadata]], skip_adapter: bool = False
+        self, records: Iterable[Tuple[int, int, Any, Metadata]], skip_adapter: bool = False
     ) -> None:
+        # """
+        # Inserts or updates *vectors* records in the collection.
+
+        # Args:
+        #     records (Iterable[Tuple[int, int, Any, Metadata]]): An iterable of content to upsert.
+        #     Each record is a tuple where:
+        #       - the first element is the document_content_id
+        #       - the second element is the begin_offset_byte
+        #       - the third element is an iterable of numeric values or relevant input type for the
+        #         adapter assigned to the collection
+        #       - the fourth element is metadata associated with the vector
+
+        #     skip_adapter (bool): Should the adapter be skipped while upserting. i.e. if vectors are being
+        #         provided, rather than a media type that needs to be transformed
+        # """
+
+        # chunk_size = 500
+
+        # if skip_adapter:
+        #     pipeline = flu(records).chunk(chunk_size)
+        # else:
+        #     # Construct a lazy pipeline of steps to transform and chunk user input
+        #     pipeline = flu(self.adapter(records, AdapterContext("upsert"))).chunk(
+        #         chunk_size
+        #     )
+
+        # with self.client.Session() as sess:
+        #     with sess.begin():
+        #         for chunk in pipeline:
+        #             stmt = postgresql.insert(self.table).values(chunk)
+        #             stmt = stmt.on_conflict_do_update(
+        #                 index_elements=[self.table.c.vector_id],
+        #                 set_=dict(
+        #                     vector=stmt.excluded.vector
+        #                 ),
+        #             )
+        #             sess.execute(stmt)
+        # return None
         """
         Inserts or updates *vectors* records in the collection.
 
         Args:
-            records (Iterable[Tuple[str, Any, Metadata]]): An iterable of content to upsert.
+            records (Iterable[Tuple[int, int, Iterable[Numeric], Metadata]]): An iterable of content to upsert.
                 Each record is a tuple where:
-                  - the first element is a unique string identifier
-                  - the second element is an iterable of numeric values or relevant input type for the
+                - the first element is the document_content_id
+                - the second element is the begin_offset_byte
+                - the third element is an iterable of numeric values or relevant input type for the
                     adapter assigned to the collection
-                  - the third element is metadata associated with the vector
+                - the fourth element is metadata associated with the vector
 
-            skip_adapter (bool): Should the adapter be skipped while upserting. i.e. if vectors are being
+            skip_adapter (bool): Should the adapter be skipped while upserting. i.e., if vectors are being
                 provided, rather than a media type that needs to be transformed
         """
 
@@ -400,103 +440,210 @@ class Collection:
             pipeline = flu(records).chunk(chunk_size)
         else:
             # Construct a lazy pipeline of steps to transform and chunk user input
-            pipeline = flu(self.adapter(records, AdapterContext("upsert"))).chunk(
-                chunk_size
-            )
+            pipeline = flu(self.adapter(records, AdapterContext("upsert"))).chunk(chunk_size)
 
         with self.client.Session() as sess:
             with sess.begin():
                 for chunk in pipeline:
-                    stmt = postgresql.insert(self.table).values(chunk)
+                    values = [
+                        {
+                            "document_content_id": record[0],
+                            "begin_offset_byte": record[1],
+                            "vector": record[2],
+                            "chunk_bytes": record[3].get("chunk_bytes"),
+                            "offset_began": record[3].get("offset_began"),
+                            "memento_membership": record[3].get("memento_membership"),
+                        }
+                        for record in chunk
+                    ]
+                    stmt = postgresql.insert(self.table).values(values)
                     stmt = stmt.on_conflict_do_update(
-                        index_elements=[self.table.c.vector_id],
-                        set_=dict(
-                            vector=stmt.excluded.vector
-                        ),
+                        index_elements=[self.table.c.document_content_id, self.table.c.begin_offset_byte],
+                        set_={
+                            self.table.c.vector: stmt.excluded.vector,
+                            self.table.c.chunk_bytes: stmt.excluded.chunk_bytes,
+                            self.table.c.offset_began: stmt.excluded.offset_began,
+                            self.table.c.memento_membership: stmt.excluded.memento_membership,
+                        },
                     )
                     sess.execute(stmt)
         return None
 
-    def fetch(self, ids: Iterable[str]) -> List[Record]:
+    def fetch(self, keys: Iterable[Tuple[int, int]]) -> List[Record]:
+        # """
+        # Fetches vectors from the collection by their identifiers.
+
+        # Args:
+        #     keys (Iterable[Tuple[int, int]]): An iterable of tuples, where each tuple consists of
+        #                                   (document_content_id, begin_offset_byte) which uniquely identifies a vector.
+
+        # Returns:
+        #     List[Record]: A list of the fetched vectors.
+        # """
+        # if any(not isinstance(key, tuple) or len(key) != 2 for key in keys):
+        #     raise ArgError("keys must be an iterable of tuples, each with two integers")
+
+
+        # chunk_size = 12
+        # records = []
+        # with self.client.Session() as sess:
+        #     with sess.begin():
+        #         for id_chunk in flu(ids).chunk(chunk_size):
+        #             stmt = select(self.table).where(self.table.c.vector_id.in_(id_chunk))
+        #             chunk_records = sess.execute(stmt)
+        #             records.extend(chunk_records)
+        # return records
         """
-        Fetches vectors from the collection by their identifiers.
+        Fetches vectors from the collection by their composite primary keys.
 
         Args:
-            ids (Iterable[str]): An iterable of vector identifiers.
+            keys (Iterable[Tuple[int, int]]): An iterable of tuples, where each tuple consists of
+                                            (document_content_id, begin_offset_byte) which uniquely identifies a vector.
 
         Returns:
             List[Record]: A list of the fetched vectors.
         """
-        if isinstance(ids, str):
-            raise ArgError("ids must be a list of strings")
+        if any(not isinstance(key, tuple) or len(key) != 2 for key in keys):
+            raise ArgError("keys must be an iterable of tuples, each with two integers")
 
-        chunk_size = 12
+        chunk_size = 12  # Or any reasonable number that fits your use case
         records = []
         with self.client.Session() as sess:
             with sess.begin():
-                for id_chunk in flu(ids).chunk(chunk_size):
-                    stmt = select(self.table).where(self.table.c.vector_id.in_(id_chunk))
-                    chunk_records = sess.execute(stmt)
-                    records.extend(chunk_records)
+                for key_chunk in flu(keys).chunk(chunk_size):
+                    stmt = select(self.table).where(
+                        or_(*[
+                            and_(
+                                self.table.c.document_content_id == doc_id,
+                                self.table.c.begin_offset_byte == offset
+                            ) for doc_id, offset in key_chunk
+                        ])
+                    )
+                    chunk_records = sess.execute(stmt).fetchall()
+                    records.extend([
+                        (
+                            row.document_content_id,
+                            row.begin_offset_byte,
+                            list(row.vector),
+                            {
+                                'chunk_bytes': row.chunk_bytes,
+                                'offset_began': row.offset_began,
+                                'memento_membership': row.memento_membership
+                            }
+                        ) for row in chunk_records
+                    ])
         return records
 
+    # def delete(
+    #     self, ids: Optional[Iterable[str]] = None, filters: Optional[Metadata] = None
+    # ) -> List[str]:
+    #     """
+    #     Deletes vectors from the collection by matching filters or ids.
+
+    #     Args:
+    #         ids (Iterable[str], optional): An iterable of vector identifiers.
+    #         filters (Optional[Dict], optional): Filters to apply to the search. Defaults to None.
+
+    #     Returns:
+    #         List[str]: A list of the identifiers of the deleted vectors.
+    #     """
+    #     if ids is None and filters is None:
+    #         raise ArgError("Either ids or filters must be provided.")
+
+    #     if ids is not None and filters is not None:
+    #         raise ArgError("Either ids or filters must be provided, not both.")
+
+    #     if isinstance(ids, str):
+    #         raise ArgError("ids must be a list of strings")
+
+    #     ids = ids or []
+    #     filters = filters or {}
+    #     del_ids = []
+
+    #     with self.client.Session() as sess:
+    #         with sess.begin():
+    #             if ids:
+    #                 for id_chunk in flu(ids).chunk(12):
+    #                     stmt = (
+    #                         delete(self.table)
+    #                         .where(self.table.c.vector_id.in_(id_chunk))
+    #                         .returning(self.table.c.vector_id)
+    #                     )
+    #                     del_ids.extend(sess.execute(stmt).scalars() or [])
+
+    #     return del_ids
     def delete(
-        self, ids: Optional[Iterable[str]] = None, filters: Optional[Metadata] = None
-    ) -> List[str]:
+        self, keys: Optional[Iterable[Tuple[int, int]]] = None, filters: Optional[Metadata] = None
+    ) -> List[Tuple[int, int]]:
         """
-        Deletes vectors from the collection by matching filters or ids.
+        Deletes vectors from the collection by matching filters or composite keys.
 
         Args:
-            ids (Iterable[str], optional): An iterable of vector identifiers.
+            keys (Iterable[Tuple[int, int]], optional): An iterable of composite keys (document_content_id, begin_offset_byte).
             filters (Optional[Dict], optional): Filters to apply to the search. Defaults to None.
 
         Returns:
-            List[str]: A list of the identifiers of the deleted vectors.
+            List[Tuple[int, int]]: A list of the composite keys of the deleted vectors.
         """
-        if ids is None and filters is None:
-            raise ArgError("Either ids or filters must be provided.")
+        if keys is None and filters is None:
+            raise ArgError("Either keys or filters must be provided.")
 
-        if ids is not None and filters is not None:
-            raise ArgError("Either ids or filters must be provided, not both.")
+        if keys is not None and filters is not None:
+            raise ArgError("Either keys or filters must be provided, not both.")
 
-        if isinstance(ids, str):
-            raise ArgError("ids must be a list of strings")
+        if isinstance(keys, tuple):
+            raise ArgError("keys must be an iterable of tuples")
 
-        ids = ids or []
+        keys = keys or []
         filters = filters or {}
-        del_ids = []
+        deleted_keys = []
 
         with self.client.Session() as sess:
             with sess.begin():
-                if ids:
-                    for id_chunk in flu(ids).chunk(12):
+                if keys:
+                    for key_chunk in flu(keys).chunk(12):
                         stmt = (
                             delete(self.table)
-                            .where(self.table.c.vector_id.in_(id_chunk))
-                            .returning(self.table.c.vector_id)
+                            .where(
+                                and_(
+                                    self.table.c.document_content_id == bindparam("_doc_id"),
+                                    self.table.c.begin_offset_byte == bindparam("_offset"),
+                                )
+                            )
+                            .returning(self.table.c.document_content_id, self.table.c.begin_offset_byte)
                         )
-                        del_ids.extend(sess.execute(stmt).scalars() or [])
+                        for doc_id, offset in key_chunk:
+                            result = sess.execute(stmt, {"_doc_id": doc_id, "_offset": offset})
+                            deleted_keys.extend(result.fetchall())
 
-        return del_ids
+        return deleted_keys
 
-    def __getitem__(self, items):
+    def __getitem__(self, key: Tuple[int, int]) -> Record:
+
         """
-        Fetches a vector from the collection by its identifier.
+        Fetches a vector from the collection by its composite primary key.
 
         Args:
-            items (int): The identifier of the vector.
+            key (Tuple[int, int]): The composite primary key of the vector, consisting of (document_content_id, begin_offset_byte).
 
         Returns:
             Record: The fetched vector.
+
+        Raises:
+            ArgError: If the key is not a tuple with two integers.
+            KeyError: If no item is found with the requested key.
         """
-        if not isinstance(items, int):
-            raise ArgError("items must be a int id")
+        if not isinstance(key, tuple) or len(key) != 2:
+            raise ArgError("key must be a tuple with two integers: (document_content_id, begin_offset_byte)")
 
-        row = self.fetch([items])
+        document_content_id, begin_offset_byte = key
 
-        if row == []:
-            raise KeyError("no item found with requested id")
-        return row[0]
+        records = self.fetch([(document_content_id, begin_offset_byte)])
+
+        if not records:
+            raise KeyError(f"No item found with the requested key: {key}")
+
+        return records[0]
 
     def query(
         self,
@@ -559,13 +706,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [(None, data, None, None, None, None, None, None, None)]
+            adapted_query = [(data, None, None, None, None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[(None, data, None, None, None, None, None, None, None)],
+                    records=[(data, None, None, None, None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
@@ -582,19 +729,15 @@ class Collection:
 
         distance_clause = distance_lambda(self.table.c.vector)(vec)
 
-        cols = [self.table.c.vector_id]
+        cols = [self.table.c.document_content_id, self.table.c.begin_offset_byte]
 
         if include_value:
             cols.append(distance_clause)
 
         if include_metadata:
-            cols.append(self.table.c.document_content_id)
-            cols.append(self.table.c.begin_offset_byte)
             cols.append(self.table.c.chunk_bytes)
-            cols.append(self.table.c.offset_began_hhmm1970)
+            cols.append(self.table.c.offset_began)
             cols.append(self.table.c.memento_membership)
-            cols.append(self.table.c.temp_doc_instance_id)
-            cols.append(self.table.c.temp_vector_uuid)
 
         stmt = select(*cols)
         stmt = stmt.order_by(distance_clause)
@@ -822,7 +965,7 @@ class Collection:
 
                 if method == IndexMethod.ivfflat:
                     if not index_arguments:
-                        n_records: int = sess.execute(func.count(self.table.c.vector_id)).scalar()  # type: ignore
+                        n_records: int = sess.execute(func.count(distinct(self.table.c.document_content_id, self.table.c.begin_offset_byte))).scalar()  # type: ignore
 
                         n_lists = (
                             int(max(n_records / 1000, 30))
@@ -981,14 +1124,12 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
     return Table(
         name,
         meta,
-        Column("vector_id", BIGINT, primary_key=True, autoincrement=True),
         Column("vector", Vector(dimension), nullable=True),
-        Column("document_content_id", BIGINT, nullable=True),
-        Column("begin_offset_byte", INTEGER, nullable=True),
+        Column("document_content_id", BIGINT, nullable=False),
+        Column("begin_offset_byte", INTEGER, nullable=False),
         Column("chunk_bytes", INTEGER, nullable=True),
-        Column("offset_began_hhmm1970", BIGINT, nullable=True),
+        Column("offset_began", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
-        Column("temp_doc_instance_id", INTEGER, nullable=True),
-        Column("temp_vector_uuid", UUID, nullable=True),
+        PrimaryKeyConstraint("document_content_id", "begin_offset_byte"),
         extend_existing=True,
     )
