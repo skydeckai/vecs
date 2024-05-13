@@ -1131,5 +1131,5 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
         Column("offset_began", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
         PrimaryKeyConstraint("document_content_id", "begin_offset_byte"),
-        extend_existing=True,
+        extend_existing=False,
     )
