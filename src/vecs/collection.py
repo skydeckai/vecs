@@ -966,7 +966,7 @@ class Collection:
 
                 if method == IndexMethod.ivfflat:
                     if not index_arguments:
-                        n_records: int = sess.execute(func.count(distinct(self.table.c.document_content_id, self.table.c.begin_offset_byte))).scalar()  # type: ignore
+                        n_records: int = sess.execute(func.count()).scalar()  # type: ignore
 
                         n_lists = (
                             int(max(n_records / 1000, 30))
