@@ -177,18 +177,7 @@ class Client:
                     "No collection found with requested name")
 
             name, dimension = query_result
-            # Create a new Collection instance
-            collection = Collection(name, dimension, self)
-
-            # Update the table object to reflect the existing table
-            collection.table = Table(
-                name,
-                self.meta,
-                autoload_with=self.engine,
-                extend_existing=True,
-            )
-
-            return collection
+        return Collection(name, dimension, self, extend_existing=True)
 
     def list_collections(self) -> List["Collection"]:
         """

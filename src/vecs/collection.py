@@ -162,6 +162,7 @@ class Collection:
         dimension: int,
         client: Client,
         adapter: Optional[Adapter] = None,
+        extend_existing: bool = False,
     ):
         """
         Initializes a new instance of the `Collection` class.
@@ -177,7 +178,7 @@ class Collection:
         self.client = client
         self.name = name
         self.dimension = dimension
-        self.table = build_table(name, client.meta, dimension)
+        self.table = build_table(name, client.meta, dimension, extend_existing=extend_existing)
         self._index: Optional[str] = None
         self.adapter = adapter or Adapter(steps=[NoOp(dimension=dimension)])
 
@@ -1108,7 +1109,7 @@ def build_filters(json_col: Column, filters: Dict):
                     raise Unreachable()
 
 
-def build_table(name: str, meta: MetaData, dimension: int) -> Table:
+def build_table(name: str, meta: MetaData, dimension: int, extend_existing: bool = False) -> Table:
     """
     PRIVATE
 
@@ -1131,5 +1132,5 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
         Column("offset_began", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
         PrimaryKeyConstraint("document_content_id", "begin_offset_byte"),
-        extend_existing=False,
+        extend_existing=extend_existing,
     )
