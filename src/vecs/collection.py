@@ -379,7 +379,7 @@ class Collection:
         return self
 
     def upsert(
-        self, records: Iterable[Tuple[int, int, Any, Metadata]], skip_adapter: bool = False
+        self, records: Iterable[Tuple[int, int, Any, int, int, int]], skip_adapter: bool = False
     ) -> None:
         """
         Inserts or updates *vectors* records in the collection.
@@ -412,7 +412,10 @@ class Collection:
                     stmt = stmt.on_conflict_do_update(
                         index_elements=[self.table.c.document_content_id, self.table.c.begin_offset_byte],
                         set_=dict(
-                            vector=stmt.excluded.vector, metadata=stmt.excluded.metadata
+                            vector=stmt.excluded.vector,
+                            chunk_bytes=stmt.excluded.chunk_bytes,
+                            offset_began=stmt.excluded.offset_began,
+                            memento_membership=stmt.excluded.memento_membership
                         ),
                     )
                     sess.execute(stmt)
