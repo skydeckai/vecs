@@ -28,7 +28,6 @@ from sqlalchemy import (
     select,
     text,
     INTEGER,
-    distinct,
     PrimaryKeyConstraint
 )
 from sqlalchemy.dialects import postgresql
@@ -265,18 +264,6 @@ class Collection:
         if not collection_dimension:
             self.table.create(self.client.engine)
 
-            # with self.client.Session() as sess:
-            #     sess.execute(
-            #         text(
-            #             f"""
-            #             create index "{self.name}_temp_doc_instance_id_idx"
-            #               on vecs."{self.name}"
-            #               using btree ( temp_doc_instance_id )
-            #             """
-            #         )
-            #     )
-            #     sess.commit()
-
             with self.client.Session() as sess:
                 sess.execute(
                     text(
@@ -322,18 +309,6 @@ class Collection:
                 "Collection with requested name already exists"
             )
         self.table.create(self.client.engine)
-
-        # with self.client.Session() as sess:
-        #     sess.execute(
-        #         text(
-        #             f"""
-        #             create index "{self.name}_temp_doc_instance_id_idx"
-        #               on vecs."{self.name}"
-        #               using btree ( temp_doc_instance_id )
-        #             """
-        #         )
-        #     )
-        #     sess.commit()
 
         with self.client.Session() as sess:
             sess.execute(
@@ -421,181 +396,86 @@ class Collection:
                     sess.execute(stmt)
         return None
 
-    def fetch(self, keys: Iterable[Tuple[int, int]]) -> List[Record]:
-        # """
-        # Fetches vectors from the collection by their identifiers.
-
-        # Args:
-        #     keys (Iterable[Tuple[int, int]]): An iterable of tuples, where each tuple consists of
-        #                                   (document_content_id, begin_offset_byte) which uniquely identifies a vector.
-
-        # Returns:
-        #     List[Record]: A list of the fetched vectors.
-        # """
-        # if any(not isinstance(key, tuple) or len(key) != 2 for key in keys):
-        #     raise ArgError("keys must be an iterable of tuples, each with two integers")
-
-
-        # chunk_size = 12
-        # records = []
-        # with self.client.Session() as sess:
-        #     with sess.begin():
-        #         for id_chunk in flu(ids).chunk(chunk_size):
-        #             stmt = select(self.table).where(self.table.c.vector_id.in_(id_chunk))
-        #             chunk_records = sess.execute(stmt)
-        #             records.extend(chunk_records)
-        # return records
+    def fetch(self, ids: Iterable[str]) -> List[Record]:
         """
-        Fetches vectors from the collection by their composite primary keys.
+        Fetches vectors from the collection by their identifiers.
 
         Args:
-            keys (Iterable[Tuple[int, int]]): An iterable of tuples, where each tuple consists of
-                                            (document_content_id, begin_offset_byte) which uniquely identifies a vector.
+            ids (Iterable[str]): An iterable of vector identifiers.
 
         Returns:
             List[Record]: A list of the fetched vectors.
         """
-        if any(not isinstance(key, tuple) or len(key) != 2 for key in keys):
-            raise ArgError("keys must be an iterable of tuples, each with two integers")
+        if isinstance(ids, str):
+            raise ArgError("ids must be a list of strings")
 
-        chunk_size = 12  # Or any reasonable number that fits your use case
+        chunk_size = 12
         records = []
         with self.client.Session() as sess:
             with sess.begin():
-                for key_chunk in flu(keys).chunk(chunk_size):
-                    stmt = select(self.table).where(
-                        or_(*[
-                            and_(
-                                self.table.c.document_content_id == doc_id,
-                                self.table.c.begin_offset_byte == offset
-                            ) for doc_id, offset in key_chunk
-                        ])
-                    )
-                    chunk_records = sess.execute(stmt).fetchall()
-                    records.extend([
-                        (
-                            row.document_content_id,
-                            row.begin_offset_byte,
-                            list(row.vector),
-                            {
-                                'chunk_bytes': row.chunk_bytes,
-                                'offset_began': row.offset_began,
-                                'memento_membership': row.memento_membership
-                            }
-                        ) for row in chunk_records
-                    ])
+                for id_chunk in flu(ids).chunk(chunk_size):
+                    stmt = select(self.table).where(self.table.c.vector_id.in_(id_chunk))
+                    chunk_records = sess.execute(stmt)
+                    records.extend(chunk_records)
         return records
 
-    # def delete(
-    #     self, ids: Optional[Iterable[str]] = None, filters: Optional[Metadata] = None
-    # ) -> List[str]:
-    #     """
-    #     Deletes vectors from the collection by matching filters or ids.
-
-    #     Args:
-    #         ids (Iterable[str], optional): An iterable of vector identifiers.
-    #         filters (Optional[Dict], optional): Filters to apply to the search. Defaults to None.
-
-    #     Returns:
-    #         List[str]: A list of the identifiers of the deleted vectors.
-    #     """
-    #     if ids is None and filters is None:
-    #         raise ArgError("Either ids or filters must be provided.")
-
-    #     if ids is not None and filters is not None:
-    #         raise ArgError("Either ids or filters must be provided, not both.")
-
-    #     if isinstance(ids, str):
-    #         raise ArgError("ids must be a list of strings")
-
-    #     ids = ids or []
-    #     filters = filters or {}
-    #     del_ids = []
-
-    #     with self.client.Session() as sess:
-    #         with sess.begin():
-    #             if ids:
-    #                 for id_chunk in flu(ids).chunk(12):
-    #                     stmt = (
-    #                         delete(self.table)
-    #                         .where(self.table.c.vector_id.in_(id_chunk))
-    #                         .returning(self.table.c.vector_id)
-    #                     )
-    #                     del_ids.extend(sess.execute(stmt).scalars() or [])
-
-    #     return del_ids
     def delete(
-        self, keys: Optional[Iterable[Tuple[int, int]]] = None, filters: Optional[Metadata] = None
-    ) -> List[Tuple[int, int]]:
+        self, ids: Optional[Iterable[str]] = None, filters: Optional[Metadata] = None
+    ) -> List[str]:
         """
-        Deletes vectors from the collection by matching filters or composite keys.
+        Deletes vectors from the collection by matching filters or ids.
 
         Args:
-            keys (Iterable[Tuple[int, int]], optional): An iterable of composite keys (document_content_id, begin_offset_byte).
+            ids (Iterable[str], optional): An iterable of vector identifiers.
             filters (Optional[Dict], optional): Filters to apply to the search. Defaults to None.
 
         Returns:
-            List[Tuple[int, int]]: A list of the composite keys of the deleted vectors.
+            List[str]: A list of the identifiers of the deleted vectors.
         """
-        if keys is None and filters is None:
-            raise ArgError("Either keys or filters must be provided.")
+        if ids is None and filters is None:
+            raise ArgError("Either ids or filters must be provided.")
 
-        if keys is not None and filters is not None:
-            raise ArgError("Either keys or filters must be provided, not both.")
+        if ids is not None and filters is not None:
+            raise ArgError("Either ids or filters must be provided, not both.")
 
-        if isinstance(keys, tuple):
-            raise ArgError("keys must be an iterable of tuples")
+        if isinstance(ids, str):
+            raise ArgError("ids must be a list of strings")
 
-        keys = keys or []
+        ids = ids or []
         filters = filters or {}
-        deleted_keys = []
+        del_ids = []
 
         with self.client.Session() as sess:
             with sess.begin():
-                if keys:
-                    for key_chunk in flu(keys).chunk(12):
+                if ids:
+                    for id_chunk in flu(ids).chunk(12):
                         stmt = (
                             delete(self.table)
-                            .where(
-                                and_(
-                                    self.table.c.document_content_id == bindparam("_doc_id"),
-                                    self.table.c.begin_offset_byte == bindparam("_offset"),
-                                )
-                            )
-                            .returning(self.table.c.document_content_id, self.table.c.begin_offset_byte)
+                            .where(self.table.c.vector_id.in_(id_chunk))
+                            .returning(self.table.c.vector_id)
                         )
-                        for doc_id, offset in key_chunk:
-                            result = sess.execute(stmt, {"_doc_id": doc_id, "_offset": offset})
-                            deleted_keys.extend(result.fetchall())
+                        del_ids.extend(sess.execute(stmt).scalars() or [])
 
-        return deleted_keys
+        return del_ids
 
-    def __getitem__(self, key: Tuple[int, int]) -> Record:
-
+    def __getitem__(self, items):
         """
-        Fetches a vector from the collection by its composite primary key.
+        Fetches a vector from the collection by its identifier.
 
         Args:
-            key (Tuple[int, int]): The composite primary key of the vector, consisting of (document_content_id, begin_offset_byte).
+            items (int): The identifier of the vector.
 
         Returns:
             Record: The fetched vector.
-
-        Raises:
-            ArgError: If the key is not a tuple with two integers.
-            KeyError: If no item is found with the requested key.
         """
-        if not isinstance(key, tuple) or len(key) != 2:
-            raise ArgError("key must be a tuple with two integers: (document_content_id, begin_offset_byte)")
+        if not isinstance(items, int):
+            raise ArgError("items must be a int id")
 
-        document_content_id, begin_offset_byte = key
+        row = self.fetch([items])
 
-        records = self.fetch([(document_content_id, begin_offset_byte)])
-
-        if not records:
-            raise KeyError(f"No item found with the requested key: {key}")
-
-        return records[0]
+        if row == []:
+            raise KeyError("no item found with requested id")
+        return row[0]
 
     def query(
         self,
