@@ -181,6 +181,7 @@ class Client:
                 name,
                 dimension,
                 self,
+                extend_existing=True,
             )
 
     def list_collections(self) -> List["Collection"]:
