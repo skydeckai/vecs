@@ -322,17 +322,17 @@ class Collection:
             )
         self.table.create(self.client.engine)
 
-        with self.client.Session() as sess:
-            sess.execute(
-                text(
-                    f"""
-                    create index "{self.name}_temp_doc_instance_id_idx"
-                      on vecs."{self.name}"
-                      using btree ( temp_doc_instance_id )
-                    """
-                )
-            )
-            sess.commit()
+        # with self.client.Session() as sess:
+        #     sess.execute(
+        #         text(
+        #             f"""
+        #             create index "{self.name}_temp_doc_instance_id_idx"
+        #               on vecs."{self.name}"
+        #               using btree ( temp_doc_instance_id )
+        #             """
+        #         )
+        #     )
+        #     sess.commit()
 
         with self.client.Session() as sess:
             sess.execute(
