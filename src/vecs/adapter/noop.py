@@ -51,5 +51,5 @@ class NoOp(AdapterStep):
         Yields:
             Tuple[Any, int, int, int, int, int]: The input record.
         """
-        for vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership in records:
-            yield (vector, document_content_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership)
+        for vector, document_instance_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership in records:
+            yield (vector, document_instance_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership)
