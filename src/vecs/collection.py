@@ -280,9 +280,9 @@ class Collection:
                 sess.execute(
                     text(
                         f"""
-                        create index "{self.name}_document_content_id_idx"
+                        create index "{self.name}_document_instance_id_idx"
                           on vecs."{self.name}"
-                          using btree ( document_content_id )
+                          using btree ( document_instance_id )
                         """
                     )
                 )
@@ -326,9 +326,9 @@ class Collection:
             sess.execute(
                 text(
                     f"""
-                    create index "{self.name}_document_content_id_idx"
+                    create index "{self.name}_document_instance_id_idx"
                         on vecs."{self.name}"
-                        using btree ( document_content_id )
+                        using btree ( document_instance_id )
                     """
                 )
             )
@@ -362,7 +362,7 @@ class Collection:
         Args:
             records (Iterable[Tuple[int, int, Iterable[Numeric], Metadata]]): An iterable of content to upsert.
                 Each record is a tuple where:
-                - the first element is the document_content_id
+                - the first element is the document_instance_id
                 - the second element is the begin_offset_byte
                 - the third element is an iterable of numeric values or relevant input type for the
                     adapter assigned to the collection
@@ -385,7 +385,7 @@ class Collection:
                 for chunk in pipeline:
                     stmt = postgresql.insert(self.table).values(chunk)
                     stmt = stmt.on_conflict_do_update(
-                        index_elements=[self.table.c.document_content_id, self.table.c.begin_offset_byte],
+                        index_elements=[self.table.c.document_instance_id, self.table.c.begin_offset_byte],
                         set_=dict(
                             vector=stmt.excluded.vector,
                             chunk_bytes=stmt.excluded.chunk_bytes,
@@ -561,7 +561,7 @@ class Collection:
 
         distance_clause = distance_lambda(self.table.c.vector)(vec)
 
-        cols = [self.table.c.document_content_id, self.table.c.begin_offset_byte]
+        cols = [self.table.c.document_instance_id, self.table.c.begin_offset_byte]
 
         if include_value:
             cols.append(distance_clause)
@@ -957,11 +957,11 @@ def build_table(name: str, meta: MetaData, dimension: int, extend_existing: bool
         name,
         meta,
         Column("vector", Vector(dimension), nullable=True),
-        Column("document_content_id", BIGINT, nullable=False),
+        Column("document_instance_id", BIGINT, nullable=False),
         Column("begin_offset_byte", INTEGER, nullable=False),
         Column("chunk_bytes", INTEGER, nullable=True),
         Column("offset_began", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
-        PrimaryKeyConstraint("document_content_id", "begin_offset_byte"),
+        PrimaryKeyConstraint("document_instance_id", "begin_offset_byte"),
         extend_existing=extend_existing,
     )
