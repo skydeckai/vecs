@@ -1,6 +1,6 @@
-from vecs import exc
-from vecs.client import Client
-from vecs.collection import (
+from vecs1 import exc
+from vecs1.client import Client
+from vecs1.collection import (
     Collection,
     IndexArgsHNSW,
     IndexArgsIVFFlat,
@@ -8,7 +8,7 @@ from vecs.collection import (
     IndexMethod,
 )
 
-__project__ = "vecs"
+__project__ = "vecs1"
 __version__ = "0.4.2"
 
 

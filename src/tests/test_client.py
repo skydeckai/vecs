@@ -1,9 +1,9 @@
 import pytest
 import sqlalchemy
 
-import vecs
+import vecs1
 
-def test_create_collection(client: vecs.Client) -> None:
+def test_create_collection(client: vecs1.Client) -> None:
     with pytest.warns(DeprecationWarning):
         client.create_collection(name="docs", dimension=384)
 

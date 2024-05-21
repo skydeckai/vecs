@@ -13,11 +13,11 @@ from deprecated import deprecated
 from sqlalchemy import MetaData, Table, create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from vecs.adapter import Adapter
-from vecs.exc import CollectionNotFound
+from vecs1.adapter import Adapter
+from vecs1.exc import CollectionNotFound
 
 if TYPE_CHECKING:
-    from vecs.collection import Collection
+    from vecs1.collection import Collection
 
 
 class Client:
@@ -104,7 +104,7 @@ class Client:
         Raises:
             CollectionAlreadyExists: If a collection with the same name already exists
         """
-        from vecs.collection import Collection
+        from vecs1.collection import Collection
 
         adapter_dimension = adapter.exported_dimension if adapter else None
 
@@ -150,7 +150,7 @@ class Client:
         Raises:
             CollectionNotFound: If no collection with the given name exists.
         """
-        from vecs.collection import Collection
+        from vecs1.collection import Collection
 
         query = text(
             f"""
@@ -186,7 +186,7 @@ class Client:
         Returns:
             list[Collection]: A list of all collections.
         """
-        from vecs.collection import Collection
+        from vecs1.collection import Collection
 
         return Collection._list_collections(self)
 
@@ -202,7 +202,7 @@ class Client:
         Returns:
             None
         """
-        from vecs.collection import Collection
+        from vecs1.collection import Collection
 
         Collection(name, -1, self)._drop()
         return

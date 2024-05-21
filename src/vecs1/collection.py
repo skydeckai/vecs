@@ -32,8 +32,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects import postgresql
 
-from vecs.adapter import Adapter, AdapterContext, NoOp
-from vecs.exc import (
+from vecs1.adapter import Adapter, AdapterContext, NoOp
+from vecs1.exc import (
     ArgError,
     CollectionAlreadyExists,
     CollectionNotFound,
@@ -43,7 +43,7 @@ from vecs.exc import (
 )
 
 if TYPE_CHECKING:
-    from vecs.client import Client
+    from vecs1.client import Client
 
 
 MetadataValues = Union[str, int, float, bool, List[str]]
@@ -161,7 +161,7 @@ class Collection:
         dimension: int,
         client: Client,
         adapter: Optional[Adapter] = None,
-        extend_existing: bool = False,
+        extend_existing: bool = True,
     ):
         """
         Initializes a new instance of the `Collection` class.

@@ -3,12 +3,12 @@ import itertools
 import numpy as np
 import pytest
 
-import vecs
-from vecs import IndexArgsHNSW, IndexArgsIVFFlat, IndexMethod
-from vecs.exc import ArgError
+import vecs1
+from vecs1 import IndexArgsHNSW, IndexArgsIVFFlat, IndexMethod
+from vecs1.exc import ArgError
 
 
-def test_upsert(client: vecs.Client) -> None:
+def test_upsert(client: vecs1.Client) -> None:
     n_records = 100
     dim = 384
 
@@ -33,7 +33,7 @@ def test_upsert(client: vecs.Client) -> None:
     movies.upsert(records)
     assert len(movies) == n_records
 
-def test_create_index(client: vecs.Client) -> None:
+def test_create_index(client: vecs1.Client) -> None:
     dim = 4
     bar = client.create_collection(name="create-index-collection", dimension=dim)
 
@@ -41,13 +41,13 @@ def test_create_index(client: vecs.Client) -> None:
 
     assert bar.index is not None
 
-    with pytest.raises(vecs.exc.ArgError):
+    with pytest.raises(vecs1.exc.ArgError):
         bar.create_index(replace=False)
 
-    with pytest.raises(vecs.exc.ArgError):
+    with pytest.raises(vecs1.exc.ArgError):
         bar.create_index(method="does not exist")
 
-    with pytest.raises(vecs.exc.ArgError):
+    with pytest.raises(vecs1.exc.ArgError):
         bar.create_index(measure="does not exist")
 
     bar.query(
@@ -57,7 +57,7 @@ def test_create_index(client: vecs.Client) -> None:
     )
 
 
-def test_ivfflat(client: vecs.Client) -> None:
+def test_ivfflat(client: vecs1.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
     bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1)])
@@ -74,7 +74,7 @@ def test_ivfflat(client: vecs.Client) -> None:
     assert len(results) == 1
 
 
-def test_hnsw(client: vecs.Client) -> None:
+def test_hnsw(client: vecs1.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
     bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1)])
@@ -91,7 +91,7 @@ def test_hnsw(client: vecs.Client) -> None:
     assert len(results) == 1
 
 
-def test_index_build_args(client: vecs.Client) -> None:
+def test_index_build_args(client: vecs1.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
     bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1)])
@@ -148,11 +148,11 @@ def test_index_build_args(client: vecs.Client) -> None:
 
     # Test that exception is raised when index build args don't match
     # the requested index type
-    with pytest.raises(vecs.exc.ArgError):
+    with pytest.raises(vecs1.exc.ArgError):
         bar.create_index(
             method=IndexMethod.ivfflat, index_arguments=IndexArgsHNSW(), replace=True
         )
-    with pytest.raises(vecs.exc.ArgError):
+    with pytest.raises(vecs1.exc.ArgError):
         bar.create_index(
             method=IndexMethod.hnsw,
             index_arguments=IndexArgsIVFFlat(n_lists=123),
@@ -161,13 +161,13 @@ def test_index_build_args(client: vecs.Client) -> None:
 
     # Test that excpetion is raised index build args are supplied by the
     # IndexMethod.auto index is specified
-    with pytest.raises(vecs.exc.ArgError):
+    with pytest.raises(vecs1.exc.ArgError):
         bar.create_index(
             method=IndexMethod.auto,
             index_arguments=IndexArgsIVFFlat(n_lists=123),
             replace=True,
         )
-    with pytest.raises(vecs.exc.ArgError):
+    with pytest.raises(vecs1.exc.ArgError):
         bar.create_index(
             method=IndexMethod.auto,
             index_arguments=IndexArgsHNSW(),
@@ -175,11 +175,11 @@ def test_index_build_args(client: vecs.Client) -> None:
         )
 
 
-def test_cosine_index_query(client: vecs.Client) -> None:
+def test_cosine_index_query(client: vecs1.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
     bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1)])
-    bar.create_index(measure=vecs.IndexMeasure.cosine_distance)
+    bar.create_index(measure=vecs1.IndexMeasure.cosine_distance)
     results = bar.query(
         data=[1, 2, 3, 4],
         limit=1,
@@ -188,11 +188,11 @@ def test_cosine_index_query(client: vecs.Client) -> None:
     assert len(results) == 1
 
 
-def test_l2_index_query(client: vecs.Client) -> None:
+def test_l2_index_query(client: vecs1.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
     bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1)])
-    bar.create_index(measure=vecs.IndexMeasure.l2_distance)
+    bar.create_index(measure=vecs1.IndexMeasure.l2_distance)
     results = bar.query(
         data=[1, 2, 3, 4],
         limit=1,
@@ -201,11 +201,11 @@ def test_l2_index_query(client: vecs.Client) -> None:
     assert len(results) == 1
 
 
-def test_max_inner_product_index_query(client: vecs.Client) -> None:
+def test_max_inner_product_index_query(client: vecs1.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
     bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1)])
-    bar.create_index(measure=vecs.IndexMeasure.max_inner_product)
+    bar.create_index(measure=vecs1.IndexMeasure.max_inner_product)
     results = bar.query(
         data=[1, 2, 3, 4],
         limit=1,
@@ -214,11 +214,11 @@ def test_max_inner_product_index_query(client: vecs.Client) -> None:
     assert len(results) == 1
 
 
-def test_mismatch_measure(client: vecs.Client) -> None:
+def test_mismatch_measure(client: vecs1.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
     bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1)])
-    bar.create_index(measure=vecs.IndexMeasure.max_inner_product)
+    bar.create_index(measure=vecs1.IndexMeasure.max_inner_product)
     with pytest.warns(UserWarning):
         results = bar.query(
             data=[1, 2, 3, 4],
@@ -229,19 +229,19 @@ def test_mismatch_measure(client: vecs.Client) -> None:
     assert len(results) == 1
 
 
-def test_is_indexed_for_measure(client: vecs.Client) -> None:
+def test_is_indexed_for_measure(client: vecs1.Client) -> None:
     bar = client.get_or_create_collection(name="bar", dimension=4)
 
-    bar.create_index(measure=vecs.IndexMeasure.max_inner_product)
+    bar.create_index(measure=vecs1.IndexMeasure.max_inner_product)
     assert not bar.is_indexed_for_measure("invalid")  # type: ignore
-    assert bar.is_indexed_for_measure(vecs.IndexMeasure.max_inner_product)
-    assert not bar.is_indexed_for_measure(vecs.IndexMeasure.cosine_distance)
+    assert bar.is_indexed_for_measure(vecs1.IndexMeasure.max_inner_product)
+    assert not bar.is_indexed_for_measure(vecs1.IndexMeasure.cosine_distance)
 
-    bar.create_index(measure=vecs.IndexMeasure.cosine_distance, replace=True)
-    assert bar.is_indexed_for_measure(vecs.IndexMeasure.cosine_distance)
+    bar.create_index(measure=vecs1.IndexMeasure.cosine_distance, replace=True)
+    assert bar.is_indexed_for_measure(vecs1.IndexMeasure.cosine_distance)
 
 
-def test_failover_ivfflat(client: vecs.Client) -> None:
+def test_failover_ivfflat(client: vecs1.Client) -> None:
     """Test that index fails over to ivfflat on 0.4.0
     This is already covered by CI's test matrix but it is convenient for faster feedback
     to include it when running on the latest version of pgvector
@@ -255,7 +255,7 @@ def test_failover_ivfflat(client: vecs.Client) -> None:
     bar.create_index(method=IndexMethod.auto)
 
 
-def test_hnsw_unavailable_error(client: vecs.Client) -> None:
+def test_hnsw_unavailable_error(client: vecs1.Client) -> None:
     """Test that index fails over to ivfflat on 0.4.0
     This is already covered by CI's test matrix but it is convenient for faster feedback
     to include it when running on the latest version of pgvector
