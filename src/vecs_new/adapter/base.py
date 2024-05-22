@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
 
-from vecs1.exc import ArgError
+from vecs_new.exc import ArgError
 
 
 class AdapterContext(str, Enum):

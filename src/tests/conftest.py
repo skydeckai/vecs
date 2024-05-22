@@ -10,7 +10,7 @@ import pytest
 from parse import parse
 from sqlalchemy import create_engine, text
 
-import vecs1
+import vecs_new
 
 PYTEST_DB = "postgresql://postgres:password@localhost:5611/vecs_db"
 
@@ -100,6 +100,6 @@ def clean_db(maybe_start_pg: None) -> Generator[str, None, None]:
 
 
 @pytest.fixture(scope="function")
-def client(clean_db: str) -> Generator[vecs1.Client, None, None]:
-    client_ = vecs1.create_client(clean_db)
+def client(clean_db: str) -> Generator[vecs_new.Client, None, None]:
+    client_ = vecs_new.create_client(clean_db)
     yield client_

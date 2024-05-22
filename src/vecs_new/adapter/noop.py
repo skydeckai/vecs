@@ -9,7 +9,6 @@ All public classes, enums, and functions are re-exported by `vecs.adapters` modu
 from typing import Any, Generator, Iterable, Optional, Tuple
 
 from .base import AdapterContext, AdapterStep
-import uuid
 
 class NoOp(AdapterStep):
     """

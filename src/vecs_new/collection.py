@@ -1,7 +1,7 @@
 """
 Defines the 'Collection' class
 
-Importing from the `vecs.collection` directly is not supported.
+Importing from the `vecs_new.collection` directly is not supported.
 All public classes, enums, and functions are re-exported by the top level `vecs` module.
 """
 from __future__ import annotations
@@ -32,8 +32,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects import postgresql
 
-from vecs1.adapter import Adapter, AdapterContext, NoOp
-from vecs1.exc import (
+from vecs_new.adapter import Adapter, AdapterContext, NoOp
+from vecs_new.exc import (
     ArgError,
     CollectionAlreadyExists,
     CollectionNotFound,
@@ -43,7 +43,7 @@ from vecs1.exc import (
 )
 
 if TYPE_CHECKING:
-    from vecs1.client import Client
+    from vecs_new.client import Client
 
 
 MetadataValues = Union[str, int, float, bool, List[str]]
@@ -205,7 +205,7 @@ class Collection:
         Returns:
             str: A string representation of the `Collection` instance.
         """
-        return f'vecs.Collection(name="{self.name}", dimension={self.dimension})'
+        return f'vecs_new.Collection(name="{self.name}", dimension={self.dimension})'
 
     def __len__(self) -> int:
         """
@@ -294,7 +294,7 @@ class Collection:
         """
         PRIVATE
 
-        Creates a new collection in the database. Raises a `vecs.exc.CollectionAlreadyExists`
+        Creates a new collection in the database. Raises a `vecs_new.exc.CollectionAlreadyExists`
         exception if a collection with the specified name already exists.
 
         Returns:
@@ -339,7 +339,7 @@ class Collection:
         """
         PRIVATE
 
-        Deletes the collection from the database. Raises a `vecs.exc.CollectionNotFound`
+        Deletes the collection from the database. Raises a `vecs_new.exc.CollectionNotFound`
         exception if no collection with the specified name exists.
 
         Returns:
@@ -732,7 +732,7 @@ class Collection:
             - Renames the new table to the existing tables name
 
             If you create dependencies (like views) on the table that underpins
-            a `vecs.Collection` the `create_index` step may require you to drop those dependencies before
+            a `vecs_new.Collection` the `create_index` step may require you to drop those dependencies before
             it will succeed.
 
         Args:
@@ -944,7 +944,7 @@ def build_table(name: str, meta: MetaData, dimension: int, extend_existing: bool
     """
     PRIVATE
 
-    Builds a SQLAlchemy model underpinning a `vecs.Collection`.
+    Builds a SQLAlchemy model underpinning a `vecs_new.Collection`.
 
     Args:
         name (str): The name of the table.
