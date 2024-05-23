@@ -177,7 +177,7 @@ class Collection:
         self.client = client
         self.name = name
         self.dimension = dimension
-        self.table = build_table(name, client.meta, dimension, extend_existing=extend_existing)
+        self.table = build_table(name, Metadata(schema="vecs"), dimension, extend_existing=extend_existing)
         self._index: Optional[str] = None
         self.adapter = adapter or Adapter(steps=[NoOp(dimension=dimension)])
 
