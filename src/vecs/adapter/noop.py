@@ -48,10 +48,14 @@ class NoOp(AdapterStep):
                 Optional[int],
                 Optional[int],
                 Optional[int],
+                Optional[int],
+                Optional[int],
             ]
         ],
         adapter_context: AdapterContext,
-    ) -> Generator[Tuple[str, Any, Dict, str, int, int, int, int], None, None]:
+    ) -> Generator[
+        Tuple[str, Any, Dict, str, int, int, int, int, int, int], None, None
+    ]:
         """
         Yields the input records without any modification.
 
@@ -63,7 +67,9 @@ class NoOp(AdapterStep):
             Tuple[str, Any, Dict, str, int, int, int]: The input record.
         """
         NUM_REQUIRED_FIELDS = 6
-        NUM_OPTIONAL_EXTRA_FIELDS = 2  # memento_membership, app_id
+        NUM_OPTIONAL_EXTRA_FIELDS = (
+            4  # memento_membership, app_id, begin_offset_byte, chunk_bytes
+        )
         MAX_NUM_FIELDS = NUM_REQUIRED_FIELDS + NUM_OPTIONAL_EXTRA_FIELDS
         for record in records:
             if len(record) < MAX_NUM_FIELDS:
@@ -78,6 +84,8 @@ class NoOp(AdapterStep):
                 order,
                 memento_membership,
                 app_id,
+                begin_offset_byte,
+                chunk_bytes,
             ) = record
             yield (
                 id,
@@ -88,4 +96,6 @@ class NoOp(AdapterStep):
                 order,
                 memento_membership,
                 app_id,
+                begin_offset_byte,
+                chunk_bytes,
             )
