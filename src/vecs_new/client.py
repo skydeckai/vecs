@@ -10,14 +10,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 from deprecated import deprecated
-from sqlalchemy import MetaData, Table, create_engine, text
+from sqlalchemy import MetaData, create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from vecs.adapter import Adapter
-from vecs.exc import CollectionNotFound
+from vecs_new.adapter import Adapter
+from vecs_new.exc import CollectionNotFound
 
 if TYPE_CHECKING:
-    from vecs.collection import Collection
+    from vecs_new.collection import Collection
 
 
 class Client:
@@ -104,7 +104,7 @@ class Client:
         Raises:
             CollectionAlreadyExists: If a collection with the same name already exists
         """
-        from vecs.collection import Collection
+        from vecs_new.collection import Collection
 
         adapter_dimension = adapter.exported_dimension if adapter else None
 
@@ -132,7 +132,7 @@ class Client:
         Raises:
             CollectionAlreadyExists: If a collection with the same name already exists
         """
-        from vecs.collection import Collection
+        from vecs_new.collection import Collection
 
         return Collection(name, dimension, self)._create()
 
@@ -150,7 +150,7 @@ class Client:
         Raises:
             CollectionNotFound: If no collection with the given name exists.
         """
-        from vecs.collection import Collection
+        from vecs_new.collection import Collection
 
         query = text(
             f"""
@@ -186,7 +186,7 @@ class Client:
         Returns:
             list[Collection]: A list of all collections.
         """
-        from vecs.collection import Collection
+        from vecs_new.collection import Collection
 
         return Collection._list_collections(self)
 
@@ -202,7 +202,7 @@ class Client:
         Returns:
             None
         """
-        from vecs.collection import Collection
+        from vecs_new.collection import Collection
 
         Collection(name, -1, self)._drop()
         return

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import setuptools
 
-PACKAGE_NAME = "vecs"
+PACKAGE_NAME = "vecs_new"
 MINIMUM_PYTHON_VERSION = (3, 8, 0, "", 0)
 
 

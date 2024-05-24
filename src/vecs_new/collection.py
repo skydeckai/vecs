@@ -1,7 +1,7 @@
 """
 Defines the 'Collection' class
 
-Importing from the `vecs.collection` directly is not supported.
+Importing from the `vecs_new.collection` directly is not supported.
 All public classes, enums, and functions are re-exported by the top level `vecs` module.
 """
 from __future__ import annotations
@@ -32,8 +32,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects import postgresql
 
-from vecs.adapter import Adapter, AdapterContext, NoOp
-from vecs.exc import (
+from vecs_new.adapter import Adapter, AdapterContext, NoOp
+from vecs_new.exc import (
     ArgError,
     CollectionAlreadyExists,
     CollectionNotFound,
@@ -43,7 +43,7 @@ from vecs.exc import (
 )
 
 if TYPE_CHECKING:
-    from vecs.client import Client
+    from vecs_new.client import Client
 
 
 MetadataValues = Union[str, int, float, bool, List[str]]
@@ -161,7 +161,7 @@ class Collection:
         dimension: int,
         client: Client,
         adapter: Optional[Adapter] = None,
-        extend_existing: bool = False,
+        extend_existing: bool = True,
     ):
         """
         Initializes a new instance of the `Collection` class.
@@ -177,7 +177,8 @@ class Collection:
         self.client = client
         self.name = name
         self.dimension = dimension
-        self.table = build_table(name, client.meta, dimension, extend_existing=extend_existing)
+        meta = MetaData(schema="vecs")
+        self.table = build_table(name, meta, dimension, extend_existing=extend_existing)
         self._index: Optional[str] = None
         self.adapter = adapter or Adapter(steps=[NoOp(dimension=dimension)])
 
@@ -205,7 +206,7 @@ class Collection:
         Returns:
             str: A string representation of the `Collection` instance.
         """
-        return f'vecs.Collection(name="{self.name}", dimension={self.dimension})'
+        return f'vecs_new.Collection(name="{self.name}", dimension={self.dimension})'
 
     def __len__(self) -> int:
         """
@@ -280,9 +281,9 @@ class Collection:
                 sess.execute(
                     text(
                         f"""
-                        create index "{self.name}_document_content_id_idx"
+                        create index "{self.name}_document_instance_id_idx"
                           on vecs."{self.name}"
-                          using btree ( document_content_id )
+                          using btree ( document_instance_id )
                         """
                     )
                 )
@@ -294,7 +295,7 @@ class Collection:
         """
         PRIVATE
 
-        Creates a new collection in the database. Raises a `vecs.exc.CollectionAlreadyExists`
+        Creates a new collection in the database. Raises a `vecs_new.exc.CollectionAlreadyExists`
         exception if a collection with the specified name already exists.
 
         Returns:
@@ -326,9 +327,9 @@ class Collection:
             sess.execute(
                 text(
                     f"""
-                    create index "{self.name}_document_content_id_idx"
+                    create index "{self.name}_document_instance_id_idx"
                         on vecs."{self.name}"
-                        using btree ( document_content_id )
+                        using btree ( document_instance_id )
                     """
                 )
             )
@@ -339,7 +340,7 @@ class Collection:
         """
         PRIVATE
 
-        Deletes the collection from the database. Raises a `vecs.exc.CollectionNotFound`
+        Deletes the collection from the database. Raises a `vecs_new.exc.CollectionNotFound`
         exception if no collection with the specified name exists.
 
         Returns:
@@ -362,7 +363,7 @@ class Collection:
         Args:
             records (Iterable[Tuple[int, int, Iterable[Numeric], Metadata]]): An iterable of content to upsert.
                 Each record is a tuple where:
-                - the first element is the document_content_id
+                - the first element is the document_instance_id
                 - the second element is the begin_offset_byte
                 - the third element is an iterable of numeric values or relevant input type for the
                     adapter assigned to the collection
@@ -385,7 +386,7 @@ class Collection:
                 for chunk in pipeline:
                     stmt = postgresql.insert(self.table).values(chunk)
                     stmt = stmt.on_conflict_do_update(
-                        index_elements=[self.table.c.document_content_id, self.table.c.begin_offset_byte],
+                        index_elements=[self.table.c.document_instance_id, self.table.c.begin_offset_byte],
                         set_=dict(
                             vector=stmt.excluded.vector,
                             chunk_bytes=stmt.excluded.chunk_bytes,
@@ -561,7 +562,7 @@ class Collection:
 
         distance_clause = distance_lambda(self.table.c.vector)(vec)
 
-        cols = [self.table.c.document_content_id, self.table.c.begin_offset_byte]
+        cols = [self.table.c.document_instance_id, self.table.c.begin_offset_byte]
 
         if include_value:
             cols.append(distance_clause)
@@ -732,7 +733,7 @@ class Collection:
             - Renames the new table to the existing tables name
 
             If you create dependencies (like views) on the table that underpins
-            a `vecs.Collection` the `create_index` step may require you to drop those dependencies before
+            a `vecs_new.Collection` the `create_index` step may require you to drop those dependencies before
             it will succeed.
 
         Args:
@@ -944,7 +945,7 @@ def build_table(name: str, meta: MetaData, dimension: int, extend_existing: bool
     """
     PRIVATE
 
-    Builds a SQLAlchemy model underpinning a `vecs.Collection`.
+    Builds a SQLAlchemy model underpinning a `vecs_new.Collection`.
 
     Args:
         name (str): The name of the table.
@@ -957,11 +958,11 @@ def build_table(name: str, meta: MetaData, dimension: int, extend_existing: bool
         name,
         meta,
         Column("vector", Vector(dimension), nullable=True),
-        Column("document_content_id", BIGINT, nullable=False),
+        Column("document_instance_id", BIGINT, nullable=False),
         Column("begin_offset_byte", INTEGER, nullable=False),
         Column("chunk_bytes", INTEGER, nullable=True),
         Column("offset_began", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
-        PrimaryKeyConstraint("document_content_id", "begin_offset_byte"),
+        PrimaryKeyConstraint("document_instance_id", "begin_offset_byte"),
         extend_existing=extend_existing,
     )
