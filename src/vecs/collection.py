@@ -4,6 +4,7 @@ Defines the 'Collection' class
 Importing from the `vecs.collection` directly is not supported.
 All public classes, enums, and functions are re-exported by the top level `vecs` module.
 """
+
 from __future__ import annotations
 
 import math
@@ -17,6 +18,7 @@ from flupy import flu
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BIGINT,
+    INTEGER,
     Column,
     MetaData,
     String,
@@ -31,7 +33,6 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects import postgresql
-
 from vecs.adapter import Adapter, AdapterContext, NoOp
 from vecs.exc import (
     ArgError,
@@ -569,13 +570,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [("", data, {}, "", None, None, None, None)]
+            adapted_query = [("", data, {}, "", None, None, None, None, None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[("", data, {}, "", None, None, None, None)],
+                    records=[("", data, {}, "", None, None, None, None, None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
@@ -603,6 +604,8 @@ class Collection:
             cols.append(self.table.c.order)
             cols.append(self.table.c.memento_membership)
             cols.append(self.table.c.app_id)
+            cols.append(self.table.c.begin_offset_byte)
+            cols.append(self.table.c.chunk_bytes)
 
         if include_text:
             cols.append(self.table.c.text)
@@ -1010,5 +1013,7 @@ def build_table(name: str, meta: MetaData, dimension: int) -> Table:
         Column("order", BIGINT, nullable=True),
         Column("memento_membership", BIGINT, nullable=True),
         Column("app_id", BIGINT, nullable=True),
+        Column("begin_offset_byte", INTEGER, nullable=True),
+        Column("chunk_bytes", INTEGER, nullable=True),
         extend_existing=True,
     )
