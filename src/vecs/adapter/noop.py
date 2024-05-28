@@ -10,6 +10,7 @@ from typing import Any, Generator, Iterable, Optional, Tuple
 
 from .base import AdapterContext, AdapterStep
 
+
 class NoOp(AdapterStep):
     """
     NoOp is a no-operation AdapterStep. It is a default adapter that passes through
@@ -37,9 +38,20 @@ class NoOp(AdapterStep):
 
     def __call__(
         self,
-        records: Iterable[Tuple[Any, Optional[int], Optional[int], Optional[int], Optional[int], Optional[int]]],
+        records: Iterable[
+            Tuple[
+                Any,
+                Optional[int],
+                Optional[int],
+                Optional[int],
+                Optional[int],
+                Optional[int],
+                Optional[int],
+                Optional[int],
+            ]
+        ],
         adapter_context: AdapterContext,
-    ) -> Generator[Tuple[Any, int, int, int, int, int], None, None]:
+    ) -> Generator[Tuple[Any, int, int, int, int, int, int, int], None, None]:
         """
         Yields the input records without any modification.
 
@@ -48,7 +60,25 @@ class NoOp(AdapterStep):
             adapter_context: Context of the adapter.
 
         Yields:
-            Tuple[Any, int, int, int, int, int]: The input record.
+            Tuple[Any, int, int, int, int, int, int, int]: The input record.
         """
-        for vector, document_instance_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership in records:
-            yield (vector, document_instance_id, begin_offset_byte, chunk_bytes, offset_began, memento_membership)
+        for (
+            vector,
+            document_instance_id,
+            document_content_id,
+            begin_offset_byte,
+            chunk_bytes,
+            offset_began,
+            memento_membership,
+            app_id,
+        ) in records:
+            yield (
+                vector,
+                document_instance_id,
+                document_content_id,
+                begin_offset_byte,
+                chunk_bytes,
+                offset_began,
+                memento_membership,
+                app_id,
+            )

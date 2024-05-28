@@ -10,7 +10,7 @@ from typing import Any, Dict, Generator, Iterable, Literal, Optional, Tuple
 
 from flupy import flu
 
-from vecs_new.exc import MissingDependency
+from vecs.exc import MissingDependency
 
 from .base import AdapterContext, AdapterStep
 
