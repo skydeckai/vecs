@@ -24,6 +24,7 @@ def test_upsert(client: vecs.Client) -> None:
             1714039150,
             1,
             1,
+            1,
         )
         for ix, vec in enumerate(np.random.random((n_records, dim)))
     ]
@@ -60,7 +61,7 @@ def test_create_index(client: vecs.Client) -> None:
 def test_ivfflat(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
 
     bar.create_index(method="ivfflat")
     results = bar.query(data=[1, 2, 3, 4], limit=1, probes=50)
@@ -77,7 +78,7 @@ def test_ivfflat(client: vecs.Client) -> None:
 def test_hnsw(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
 
     bar.create_index(method="hnsw")  # type: ignore
     results = bar.query(
@@ -94,7 +95,7 @@ def test_hnsw(client: vecs.Client) -> None:
 def test_index_build_args(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
 
     # Test that default value for nlists is used in absence of index build args
     bar.create_index(method="ivfflat")
@@ -178,7 +179,7 @@ def test_index_build_args(client: vecs.Client) -> None:
 def test_cosine_index_query(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
     bar.create_index(measure=vecs.IndexMeasure.cosine_distance)
     results = bar.query(
         data=[1, 2, 3, 4],
@@ -191,7 +192,7 @@ def test_cosine_index_query(client: vecs.Client) -> None:
 def test_l2_index_query(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
     bar.create_index(measure=vecs.IndexMeasure.l2_distance)
     results = bar.query(
         data=[1, 2, 3, 4],
@@ -204,7 +205,7 @@ def test_l2_index_query(client: vecs.Client) -> None:
 def test_max_inner_product_index_query(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
     bar.create_index(measure=vecs.IndexMeasure.max_inner_product)
     results = bar.query(
         data=[1, 2, 3, 4],
@@ -217,7 +218,7 @@ def test_max_inner_product_index_query(client: vecs.Client) -> None:
 def test_mismatch_measure(client: vecs.Client) -> None:
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
     bar.create_index(measure=vecs.IndexMeasure.max_inner_product)
     with pytest.warns(UserWarning):
         results = bar.query(
@@ -249,7 +250,7 @@ def test_failover_ivfflat(client: vecs.Client) -> None:
     client.vector_version = "0.4.1"
     dim = 4
     bar = client.get_or_create_collection(name="bar", dimension=dim)
-    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1)])
+    bar.upsert([([1, 2, 3, 4], 1, 1, 100, 1714039150, 1, 1, 1)])
     # this executes an otherwise uncovered line of code that selects ivfflat when mode is 'auto'
     # and hnsw is unavailable
     bar.create_index(method=IndexMethod.auto)

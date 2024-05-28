@@ -47,10 +47,11 @@ class NoOp(AdapterStep):
                 Optional[int],
                 Optional[int],
                 Optional[int],
+                Optional[int],
             ]
         ],
         adapter_context: AdapterContext,
-    ) -> Generator[Tuple[Any, int, int, int, int, int, int], None, None]:
+    ) -> Generator[Tuple[Any, int, int, int, int, int, int, int], None, None]:
         """
         Yields the input records without any modification.
 
@@ -59,11 +60,12 @@ class NoOp(AdapterStep):
             adapter_context: Context of the adapter.
 
         Yields:
-            Tuple[Any, int, int, int, int, int, int]: The input record.
+            Tuple[Any, int, int, int, int, int, int, int]: The input record.
         """
         for (
             vector,
             document_instance_id,
+            document_content_id,
             begin_offset_byte,
             chunk_bytes,
             offset_began,
@@ -73,6 +75,7 @@ class NoOp(AdapterStep):
             yield (
                 vector,
                 document_instance_id,
+                document_content_id,
                 begin_offset_byte,
                 chunk_bytes,
                 offset_began,

@@ -357,12 +357,9 @@ class Collection:
 
     def upsert(
         self,
-        records: Iterable[Tuple[Any, int, int, int, int, int, int]],
+        records: Iterable[Tuple[Any, int, int, int, int, int, int, int]],
         skip_adapter: bool = False,
     ) -> None:
-        # import ipdb
-
-        # ipdb.set_trace()
         """
         Inserts or updates *vectors* records in the collection.
 
@@ -372,11 +369,12 @@ class Collection:
                 - the first element is an iterable of numeric values or relevant input type for the
                     adapter assigned to the collection
                 - the second element is the document_instance_id
-                - the third element is the begin_offset_byte
-                - the fourth element is the chunk_bytes
-                - the fifth element is the offset_began
-                - the sixth element is the memento_membership
-                - the seventh element is the app_id
+                - the third element is the document_content_id
+                - the fourth element is the begin_offset_byte
+                - the fifth element is the chunk_bytes
+                - the sixth element is the offset_began
+                - the seventh element is the memento_membership
+                - the eighth element is the app_id
 
             skip_adapter (bool): Should the adapter be skipped while upserting. i.e., if vectors are being
                 provided, rather than a media type that needs to be transformed
@@ -403,6 +401,7 @@ class Collection:
                         ],
                         set_=dict(
                             vector=stmt.excluded.vector,
+                            document_content_id=stmt.excluded.document_content_id,
                             chunk_bytes=stmt.excluded.chunk_bytes,
                             offset_began=stmt.excluded.offset_began,
                             memento_membership=stmt.excluded.memento_membership,
@@ -556,13 +555,13 @@ class Collection:
             )
 
         if skip_adapter:
-            adapted_query = [(data, None, None, None, None, None, None)]
+            adapted_query = [(data, None, None, None, None, None, None, None)]
         else:
             # Adapt the query using the pipeline
             adapted_query = [
                 x
                 for x in self.adapter(
-                    records=[(data, None, None, None, None, None, None)],
+                    records=[(data, None, None, None, None, None, None, None)],
                     adapter_context=AdapterContext("query"),
                 )
             ]
@@ -581,6 +580,7 @@ class Collection:
 
         cols = [
             self.table.c.document_instance_id,
+            self.table.c.document_content_id,
             self.table.c.begin_offset_byte,
             self.table.c.chunk_bytes,
         ]
@@ -982,6 +982,7 @@ def build_table(
         meta,
         Column("vector", Vector(dimension), nullable=True),
         Column("document_instance_id", BIGINT, nullable=False),
+        Column("document_content_id", BIGINT, nullable=False),
         Column("begin_offset_byte", INTEGER, nullable=False),
         Column("chunk_bytes", INTEGER, nullable=True),
         Column("offset_began", BIGINT, nullable=True),
