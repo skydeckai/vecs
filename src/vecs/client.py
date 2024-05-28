@@ -13,11 +13,11 @@ from deprecated import deprecated
 from sqlalchemy import MetaData, create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from vecs_new.adapter import Adapter
-from vecs_new.exc import CollectionNotFound
+from vecs.adapter import Adapter
+from vecs.exc import CollectionNotFound
 
 if TYPE_CHECKING:
-    from vecs_new.collection import Collection
+    from vecs.collection import Collection
 
 
 class Client:
@@ -104,7 +104,7 @@ class Client:
         Raises:
             CollectionAlreadyExists: If a collection with the same name already exists
         """
-        from vecs_new.collection import Collection
+        from vecs.collection import Collection
 
         adapter_dimension = adapter.exported_dimension if adapter else None
 
@@ -132,7 +132,7 @@ class Client:
         Raises:
             CollectionAlreadyExists: If a collection with the same name already exists
         """
-        from vecs_new.collection import Collection
+        from vecs.collection import Collection
 
         return Collection(name, dimension, self)._create()
 
@@ -150,7 +150,7 @@ class Client:
         Raises:
             CollectionNotFound: If no collection with the given name exists.
         """
-        from vecs_new.collection import Collection
+        from vecs.collection import Collection
 
         query = text(
             f"""
@@ -173,8 +173,7 @@ class Client:
             query_result = sess.execute(query).fetchone()
 
             if query_result is None:
-                raise CollectionNotFound(
-                    "No collection found with requested name")
+                raise CollectionNotFound("No collection found with requested name")
 
             name, dimension = query_result
         return Collection(name, dimension, self, extend_existing=True)
@@ -186,7 +185,7 @@ class Client:
         Returns:
             list[Collection]: A list of all collections.
         """
-        from vecs_new.collection import Collection
+        from vecs.collection import Collection
 
         return Collection._list_collections(self)
 
@@ -202,7 +201,7 @@ class Client:
         Returns:
             None
         """
-        from vecs_new.collection import Collection
+        from vecs.collection import Collection
 
         Collection(name, -1, self)._drop()
         return
